@@ -68,7 +68,22 @@
 
         /* Empty state */
         .empty-state { padding: 4rem 1rem; text-align: center; color: #94a3b8; }
-        .empty-state i { font-size: 2.5rem; margin-bottom: .75rem; display: block; }
+        .empty-state > i { font-size: 2.5rem; margin-bottom: .75rem; display: block; }
+
+        /* Floating action button */
+        .fab-btn {
+            width: 56px !important; height: 56px !important;
+            padding: 0 !important;
+            display: inline-flex !important; align-items: center; justify-content: center;
+            font-size: 1.5rem; line-height: 1;
+            box-shadow: 0 4px 14px rgba(79,70,229,.45);
+            transition: transform .15s, box-shadow .15s;
+        }
+        .fab-btn i { display: inline; margin: 0; font-size: inherit; vertical-align: middle; }
+        .fab-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(79,70,229,.55);
+        }
     </style>
 </head>
 <body>
@@ -204,8 +219,8 @@
                 <i class="bi bi-inbox"></i>
                 <p class="fw-semibold mb-1 text-dark">No analyses yet</p>
                 <p class="small mb-3">Upload a CSV to run your first product review analysis.</p>
-                <a href="{{ route('analysis.create') }}" class="btn btn-primary btn-sm px-4">
-                    <i class="bi bi-plus-lg me-1"></i> New Analysis
+                <a href="{{ route('analysis.create') }}" class="btn btn-primary rounded-circle fab-btn" title="New Analysis">
+                    <i class="bi bi-plus-lg"></i>
                 </a>
             </div>
         @else
