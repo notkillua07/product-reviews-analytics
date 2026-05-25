@@ -27,15 +27,30 @@
         .stat-num { font-size: 1.9rem; font-weight: 800; line-height: 1; }
         .stat-label { font-size: .78rem; color: #64748b; margin-top: .25rem; }
 
-        /* History card */
-        .history-card {
+        /* Section card */
+        .section-card {
             background: #fff; border: 1px solid #e2e8f0;
             border-radius: 1rem; overflow: hidden;
         }
-        .history-card .card-header {
+        .section-card .card-header {
             background: #fff; border-bottom: 1px solid #e2e8f0;
-            padding: 1.1rem 1.4rem;
+            padding: 1rem 1.4rem;
         }
+
+        /* Product cards */
+        .product-card {
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: .75rem; padding: .85rem 1rem; height: 100%;
+            transition: border-color .15s, background .15s;
+        }
+        .product-card:hover { border-color: #c7d2fe; background: #eef2ff; }
+        .category-badge {
+            background: #ede9fe; color: #6d28d9;
+            font-size: .68rem; font-weight: 600; border-radius: 999px;
+            padding: .15rem .55rem;
+        }
+
+        /* History table */
         .table > :not(caption) > * > * { padding: .85rem 1.1rem; }
         .table thead th {
             font-size: .72rem; font-weight: 700;
@@ -67,7 +82,7 @@
         }
 
         /* Empty state */
-        .empty-state { padding: 4rem 1rem; text-align: center; color: #94a3b8; }
+        .empty-state { padding: 3rem 1rem; text-align: center; color: #94a3b8; }
         .empty-state > i { font-size: 2.5rem; margin-bottom: .75rem; display: block; }
 
         /* Floating action button */
@@ -83,6 +98,19 @@
         .fab-btn:hover {
             transform: scale(1.1);
             box-shadow: 0 6px 20px rgba(79,70,229,.55);
+        }
+
+        /* Active filter pill */
+        .filter-pill {
+            background: #eef2ff; border: 1px solid #c7d2fe;
+            border-radius: 999px; padding: .2rem .7rem;
+            font-size: .75rem; color: #4338ca; font-weight: 600;
+        }
+
+        /* Category modal list items */
+        .cat-list-item {
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: .5rem; padding: .6rem .85rem;
         }
     </style>
 </head>
@@ -126,11 +154,11 @@
     @if (Auth::user()->is_guest)
         <div class="alert alert-warning d-flex align-items-center gap-2 small mb-4" role="alert">
             <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
-            You're browsing as a guest. Analyses created here are shared across all guest sessions.
+            You're browsing as a guest. Analyses and products created here are shared across all guest sessions.
         </div>
     @endif
 
-    {{-- Flash success --}}
+    {{-- Flash --}}
     @if (session('success'))
         <div class="alert alert-success d-flex align-items-center gap-2 small mb-4" role="alert">
             <i class="bi bi-check-circle-fill flex-shrink-0"></i>
@@ -191,8 +219,9 @@
                 </div>
                 <div>
                     <div class="stat-num" style="font-size:1rem;line-height:1.3;">
-                        @if ($analyses->isNotEmpty())
-                            {{ $analyses->first()->created_at->format('d M') }}
+                        @php $latest = \App\Models\Analysis::where('user_id', Auth::id())->latest()->first(); @endphp
+                        @if ($latest)
+                            {{ $latest->created_at->format('d M') }}
                         @else
                             —
                         @endif
@@ -203,25 +232,148 @@
         </div>
     </div>
 
-    {{-- ── History ── --}}
-    <div class="history-card shadow-sm">
-        <div class="card-header d-flex align-items-center justify-content-between">
+    {{-- ── My Products ── --}}
+    <div class="section-card shadow-sm mb-4">
+        <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <h6 class="fw-bold mb-0">
+                <i class="bi bi-box-seam me-2 text-muted"></i>My Products
+                <span class="badge rounded-pill bg-light text-secondary border ms-1">{{ $products->count() }}</span>
+            </h6>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#categoryModal">
+                    <i class="bi bi-tags me-1"></i> Categories
+                </button>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#productModal">
+                    <i class="bi bi-plus-lg me-1"></i> New Product
+                </button>
+            </div>
+        </div>
+
+        <div class="p-3">
+            @if ($products->isEmpty())
+                <div class="text-center py-3 text-muted">
+                    <i class="bi bi-box" style="font-size:1.8rem;display:block;margin-bottom:.5rem;"></i>
+                    <p class="small mb-2">No products yet. Add a product to start analyzing reviews.</p>
+                    <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#productModal">
+                        <i class="bi bi-plus-lg me-1"></i> Add Product
+                    </button>
+                </div>
+            @else
+                <div class="row g-2">
+                    @foreach ($products as $product)
+                    <div class="col-sm-6 col-lg-4 col-xl-3">
+                        <div class="product-card">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1 me-2" style="min-width:0;">
+                                    <div class="fw-semibold small text-truncate">{{ $product->name }}</div>
+                                    @if ($product->category)
+                                        <span class="badge category-badge mt-1">{{ $product->category->name }}</span>
+                                    @else
+                                        <span class="text-muted" style="font-size:.7rem;">No category</span>
+                                    @endif
+                                </div>
+                                <form method="POST" action="{{ route('products.destroy', $product) }}"
+                                      onsubmit="return confirm('Delete \'{{ addslashes($product->name) }}\'?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger p-1" style="line-height:1;" title="Delete">
+                                        <i class="bi bi-trash" style="font-size:.75rem;"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="mt-2 text-muted" style="font-size:.72rem;">
+                                <i class="bi bi-bar-chart-fill me-1"></i>
+                                {{ $product->analyses_count }} {{ Str::plural('analysis', $product->analyses_count) }}
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+    </div>
+
+    {{-- ── Analysis History ── --}}
+    <div class="section-card shadow-sm">
+        <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
             <h6 class="fw-bold mb-0">
                 <i class="bi bi-clock-history me-2 text-muted"></i>Analysis History
+                <span class="badge rounded-pill bg-light text-secondary border ms-1">
+                    {{ $totalAnalyses }} {{ Str::plural('record', $totalAnalyses) }}
+                </span>
             </h6>
-            <span class="badge rounded-pill bg-light text-secondary border">
-                {{ $totalAnalyses }} {{ Str::plural('record', $totalAnalyses) }}
-            </span>
+
+            {{-- Search + category filter --}}
+            <form method="GET" action="{{ route('home') }}" class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="input-group input-group-sm" style="width:210px;">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="bi bi-search text-muted" style="font-size:.8rem;"></i>
+                    </span>
+                    <input type="text" name="q" value="{{ request('q') }}"
+                           placeholder="Search product…"
+                           class="form-control border-start-0 ps-0">
+                </div>
+
+                @if ($categories->isNotEmpty())
+                    <select name="category" class="form-select form-select-sm" style="width:160px;"
+                            onchange="this.form.submit()">
+                        <option value="">All Categories</option>
+                        @foreach ($categories as $cat)
+                            <option value="{{ $cat->id }}" @selected(request('category') == $cat->id)>
+                                {{ $cat->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                @endif
+
+                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-funnel"></i>
+                </button>
+
+                @if (request('q') || request('category'))
+                    <a href="{{ route('home') }}" class="btn btn-sm btn-outline-danger" title="Clear filters">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                @endif
+            </form>
         </div>
+
+        {{-- Active filter indicator --}}
+        @if (request('q') || request('category'))
+            <div class="px-4 py-2 border-bottom d-flex align-items-center gap-2 flex-wrap"
+                 style="background:#fafbff; font-size:.78rem;">
+                <span class="text-muted">Filtering by:</span>
+                @if (request('q'))
+                    <span class="filter-pill"><i class="bi bi-search me-1"></i>{{ request('q') }}</span>
+                @endif
+                @if (request('category'))
+                    @php $activeCat = $categories->firstWhere('id', request('category')); @endphp
+                    @if ($activeCat)
+                        <span class="filter-pill"><i class="bi bi-tag me-1"></i>{{ $activeCat->name }}</span>
+                    @endif
+                @endif
+                <span class="text-muted">·
+                    {{ $analyses->count() }} {{ Str::plural('result', $analyses->count()) }}
+                </span>
+            </div>
+        @endif
 
         @if ($analyses->isEmpty())
             <div class="empty-state">
                 <i class="bi bi-inbox"></i>
-                <p class="fw-semibold mb-1 text-dark">No analyses yet</p>
-                <p class="small mb-3">Upload a CSV to run your first product review analysis.</p>
-                <a href="{{ route('analysis.create') }}" class="btn btn-primary rounded-circle fab-btn" title="New Analysis">
-                    <i class="bi bi-plus-lg"></i>
-                </a>
+                @if (request('q') || request('category'))
+                    <p class="fw-semibold mb-1 text-dark">No matching analyses</p>
+                    <p class="small mb-3">Try adjusting your search or clearing the filter.</p>
+                    <a href="{{ route('home') }}" class="btn btn-outline-secondary btn-sm px-4">
+                        <i class="bi bi-x me-1"></i> Clear Filters
+                    </a>
+                @else
+                    <p class="fw-semibold mb-1 text-dark">No analyses yet</p>
+                    <p class="small mb-3">Upload a CSV to run your first product review analysis.</p>
+                    <a href="{{ route('analysis.create') }}"
+                       class="btn btn-primary rounded-circle fab-btn" title="New Analysis">
+                        <i class="bi bi-plus-lg"></i>
+                    </a>
+                @endif
             </div>
         @else
             <div class="table-responsive">
@@ -229,13 +381,14 @@
                     <thead>
                         <tr>
                             <th>Product</th>
+                            <th class="d-none d-md-table-cell">Category</th>
                             <th class="text-center">Reviews</th>
                             <th style="min-width:130px;">Sentiment</th>
                             <th class="text-center d-none d-md-table-cell">
-                                <i class="bi bi-emoji-smile-fill text-success me-1"></i>Positive
+                                <i class="bi bi-emoji-smile-fill text-success me-1"></i>Pos
                             </th>
                             <th class="text-center d-none d-md-table-cell">
-                                <i class="bi bi-emoji-frown-fill text-danger me-1"></i>Negative
+                                <i class="bi bi-emoji-frown-fill text-danger me-1"></i>Neg
                             </th>
                             <th class="d-none d-lg-table-cell">Top Negative Reason</th>
                             <th class="d-none d-sm-table-cell">Date</th>
@@ -250,6 +403,13 @@
                                    class="fw-semibold text-dark text-decoration-none">
                                     {{ $analysis->product_name }}
                                 </a>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                @if ($analysis->product?->category)
+                                    <span class="badge category-badge">{{ $analysis->product->category->name }}</span>
+                                @else
+                                    <span class="text-muted small">—</span>
+                                @endif
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-light text-secondary border">{{ $analysis->total_reviews }}</span>
@@ -310,6 +470,127 @@
 
 </main>
 
+{{-- ── Add Product Modal ── --}}
+<div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="productModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('products.store') }}">
+                @csrf
+                <input type="hidden" name="_form" value="product">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="productModalLabel">
+                        <i class="bi bi-box-seam me-2" style="color:#4f46e5;"></i>New Product
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
+                            Product Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="name" required class="form-control"
+                               placeholder="e.g. Wireless Headphones X3"
+                               value="{{ old('_form') === 'product' ? old('name') : '' }}">
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label fw-semibold small">Category <span class="text-muted fw-normal">(optional)</span></label>
+                        <select name="category_id" class="form-select">
+                            <option value="">— No category —</option>
+                            @foreach ($categories as $cat)
+                                <option value="{{ $cat->id }}"
+                                    @selected(old('_form') === 'product' && old('category_id') == $cat->id)>
+                                    {{ $cat->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="mt-1">
+                            <button type="button" class="btn btn-link btn-sm p-0 text-primary"
+                                    data-bs-dismiss="modal"
+                                    data-bs-toggle="modal" data-bs-target="#categoryModal">
+                                <i class="bi bi-plus-lg me-1"></i>Add new category
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4">Add Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- ── Manage Categories Modal ── --}}
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="categoryModalLabel">
+                    <i class="bi bi-tags me-2" style="color:#4f46e5;"></i>Manage Categories
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ route('product-categories.store') }}" class="mb-4">
+                    @csrf
+                    <label class="form-label fw-semibold small">
+                        New Category Name <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="text" name="name" required class="form-control"
+                               placeholder="e.g. Electronics">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-lg me-1"></i>Add
+                        </button>
+                    </div>
+                </form>
+
+                @if ($categories->isNotEmpty())
+                    <div class="border-top pt-3">
+                        <p class="small fw-semibold text-muted mb-2 text-uppercase" style="letter-spacing:.05em;">
+                            Existing Categories
+                        </p>
+                        <div class="d-flex flex-column gap-2">
+                            @foreach ($categories as $cat)
+                            <div class="cat-list-item d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="fw-semibold small">{{ $cat->name }}</span>
+                                    <span class="text-muted ms-2" style="font-size:.72rem;">
+                                        {{ $cat->products->count() }} {{ Str::plural('product', $cat->products->count()) }}
+                                    </span>
+                                </div>
+                                <form method="POST"
+                                      action="{{ route('product-categories.destroy', $cat) }}"
+                                      onsubmit="return confirm('Delete \'{{ addslashes($cat->name) }}\'? Products will become uncategorized.')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger p-1" style="line-height:1;">
+                                        <i class="bi bi-trash" style="font-size:.75rem;"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @else
+                    <p class="text-muted small mt-1 mb-0">No categories yet.</p>
+                @endif
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Auto-reopen modal after redirect if that form had errors
+    @if (old('_form') === 'product')
+        document.addEventListener('DOMContentLoaded', () => {
+            new bootstrap.Modal(document.getElementById('productModal')).show();
+        });
+    @endif
+</script>
 </body>
 </html>

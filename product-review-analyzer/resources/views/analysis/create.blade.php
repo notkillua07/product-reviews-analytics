@@ -17,7 +17,7 @@
             border-radius: 1rem; padding: 2rem;
         }
         .form-label { font-weight: 600; font-size: .875rem; }
-        .form-control:focus {
+        .form-control:focus, .form-select:focus {
             border-color: #4f46e5;
             box-shadow: 0 0 0 .2rem rgba(79,70,229,.15);
         }
@@ -59,7 +59,6 @@
             border-radius: 999px; padding: .2rem .75rem; font-size: .78rem; font-weight: 600;
         }
 
-        /* ── Buttons ── */
         .btn-primary { background: #4f46e5; border-color: #4f46e5; }
         .btn-primary:hover { background: #4338ca; border-color: #4338ca; }
         .btn-primary:disabled { background: #818cf8; border-color: #818cf8; }
@@ -105,7 +104,7 @@
     <div class="mb-4">
         <h1 class="h4 fw-bold mb-1">New Analysis</h1>
         <p class="text-muted small mb-0">
-            Upload a CSV of product reviews. The API will classify each review and surface the
+            Select a product and upload a CSV of reviews. The API will classify each review and surface the
             <strong>top 3 negative sentiment reasons</strong>.
         </p>
     </div>
@@ -128,26 +127,43 @@
 
     {{-- ── Form ── --}}
     <div class="form-card shadow-sm">
+
+        @if ($products->isEmpty())
+            <div class="text-center py-4">
+                <i class="bi bi-box text-muted" style="font-size:2.5rem;display:block;margin-bottom:.75rem;"></i>
+                <p class="fw-semibold text-dark mb-1">No products found</p>
+                <p class="text-muted small mb-3">Add a product from the dashboard before running an analysis.</p>
+                <a href="{{ route('home') }}" class="btn btn-primary px-4">
+                    <i class="bi bi-box-seam me-1"></i> Go Add a Product
+                </a>
+            </div>
+        @else
+
         <form method="POST" action="{{ route('analysis.store') }}" enctype="multipart/form-data" id="analysisForm">
             @csrf
 
-            {{-- Product name --}}
+            {{-- Product selection --}}
             <div class="mb-4">
-                <label for="product_name" class="form-label">
-                    Product Name <span class="text-danger">*</span>
+                <label for="product_id" class="form-label">
+                    Product <span class="text-danger">*</span>
                 </label>
-                <input
-                    id="product_name"
-                    type="text"
-                    name="product_name"
-                    value="{{ old('product_name') }}"
-                    required
-                    placeholder="e.g. Wireless Headphones X3"
-                    class="form-control @error('product_name') is-invalid @enderror"
-                >
-                @error('product_name')
+                <select id="product_id" name="product_id" required
+                        class="form-select @error('product_id') is-invalid @enderror">
+                    <option value="">— Select a product —</option>
+                    @foreach ($products as $product)
+                        <option value="{{ $product->id }}" @selected(old('product_id') == $product->id)>
+                            {{ $product->name }}{{ $product->category ? '  ·  ' . $product->category->name : '' }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('product_id')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
+                <div class="mt-1">
+                    <a href="{{ route('home') }}" class="small text-primary text-decoration-none">
+                        <i class="bi bi-plus-lg me-1"></i>Add new product
+                    </a>
+                </div>
             </div>
 
             {{-- CSV upload --}}
@@ -206,6 +222,8 @@
             </div>
 
         </form>
+
+        @endif
     </div>
 
 </main>
@@ -213,37 +231,37 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
-    const dropZone      = document.getElementById('dropZone');
-    const fileInput     = document.getElementById('csvFile');
-    const dropContent   = document.getElementById('dropContent');
-    const previewSec    = document.getElementById('previewSection');
-    const previewHead   = document.getElementById('previewHead');
-    const previewBody   = document.getElementById('previewBody');
-    const csvStats      = document.getElementById('csvStats');
-    const parseErrorEl  = document.getElementById('parseError');
-    const submitBtn     = document.getElementById('submitBtn');
-    const clearBtn      = document.getElementById('clearBtn');
+    const dropZone     = document.getElementById('dropZone');
+    const fileInput    = document.getElementById('csvFile');
+    const dropContent  = document.getElementById('dropContent');
+    const previewSec   = document.getElementById('previewSection');
+    const previewHead  = document.getElementById('previewHead');
+    const previewBody  = document.getElementById('previewBody');
+    const csvStats     = document.getElementById('csvStats');
+    const parseErrorEl = document.getElementById('parseError');
+    const submitBtn    = document.getElementById('submitBtn');
+    const clearBtn     = document.getElementById('clearBtn');
 
-    // ── Drag-and-drop events ──
-    dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-    dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
-    dropZone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length) {
-            fileInput.files = e.dataTransfer.files;
-            handleFile(fileInput.files[0]);
-        }
-    });
+    if (dropZone) {
+        dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFile(fileInput.files[0]);
+            }
+        });
 
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files.length) handleFile(fileInput.files[0]);
-    });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) handleFile(fileInput.files[0]);
+        });
 
-    clearBtn.addEventListener('click', resetFile);
+        clearBtn.addEventListener('click', resetFile);
+    }
 
     function handleFile(file) {
-        // Update drop zone to show file name
         dropZone.classList.add('has-file');
         dropContent.innerHTML = `
             <div class="drop-icon mb-1" style="font-size:2rem;"><i class="bi bi-file-earmark-check" style="color:#4f46e5;"></i></div>
@@ -252,11 +270,10 @@
         `;
         clearBtn.style.display = 'inline-block';
 
-        // Parse with PapaParse
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
-            preview: 0,            // parse entire file for accurate row count
+            preview: 0,
             complete: results  => renderPreview(results, file),
             error:   err      => showParseError(err.message),
         });
@@ -275,22 +292,15 @@
             return;
         }
 
-        // Stats pills
         csvStats.innerHTML = `
             <span class="stat-pill"><i class="bi bi-list-ul"></i> ${totalRows.toLocaleString()} rows</span>
             <span class="stat-pill"><i class="bi bi-layout-three-columns"></i> ${fields.length} columns</span>
         `;
 
-        // Header row
-        previewHead.innerHTML = '<tr>' + fields.map(f =>
-            `<th>${escHtml(f)}</th>`
-        ).join('') + '</tr>';
+        previewHead.innerHTML = '<tr>' + fields.map(f => `<th>${escHtml(f)}</th>`).join('') + '</tr>';
 
-        // Body rows (first 5)
         previewBody.innerHTML = preview.map(row =>
-            '<tr>' + fields.map(f =>
-                `<td>${escHtml(String(row[f] ?? ''))}</td>`
-            ).join('') + '</tr>'
+            '<tr>' + fields.map(f => `<td>${escHtml(String(row[f] ?? ''))}</td>`).join('') + '</tr>'
         ).join('');
 
         previewSec.style.display = 'block';
@@ -328,8 +338,7 @@
         return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    // Loading state on submit
-    document.getElementById('analysisForm').addEventListener('submit', function () {
+    document.getElementById('analysisForm')?.addEventListener('submit', function () {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending to API…';
     });

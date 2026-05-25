@@ -12,6 +12,7 @@ class Analysis extends Model
 
     protected $fillable = [
         'user_id',
+        'product_id',
         'product_name',
         'total_reviews',
         'positive_count',
@@ -28,6 +29,11 @@ class Analysis extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 
     public function positivePercent(): float
