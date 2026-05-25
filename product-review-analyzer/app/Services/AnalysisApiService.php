@@ -51,6 +51,7 @@ class AnalysisApiService
 
         try {
             $response = Http::timeout(300)
+                ->withoutVerifying()
                 ->withHeaders([
                     'Content-Type'               => 'application/json',
                     'Accept'                     => 'application/json',
