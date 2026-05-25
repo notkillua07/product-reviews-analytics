@@ -433,10 +433,15 @@
                                 <span class="badge rounded-pill badge-neg">{{ $analysis->negative_count }}</span>
                             </td>
                             <td class="d-none d-lg-table-cell">
-                                @php $topReason = $analysis->top_negative_reasons[0]['reason'] ?? null; @endphp
+                                @php
+                                    $topReason = $analysis->product_reasons[0]['reason']
+                                        ?? $analysis->shipping_reasons[0]['reason']
+                                        ?? null;
+                                    $isShipping = empty($analysis->product_reasons) && !empty($analysis->shipping_reasons);
+                                @endphp
                                 @if ($topReason)
                                     <span class="reason-preview" title="{{ $topReason }}">
-                                        <i class="bi bi-exclamation-circle text-danger me-1"></i>{{ $topReason }}
+                                        <i class="bi bi-{{ $isShipping ? 'truck' : 'exclamation-circle' }} text-danger me-1"></i>{{ $topReason }}
                                     </span>
                                 @else
                                     <span class="text-muted small">—</span>

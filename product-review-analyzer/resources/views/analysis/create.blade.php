@@ -68,6 +68,40 @@
             border-radius: .6rem; padding: .9rem 1rem;
             font-size: .82rem; color: #4338ca;
         }
+
+        /* ── Loading overlay ── */
+        #loadingOverlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+        }
+        #loadingOverlay.d-none { display: none !important; }
+        .overlay-card {
+            background: #fff; border-radius: 1.25rem;
+            padding: 2.5rem 3rem; text-align: center;
+            box-shadow: 0 24px 60px rgba(0,0,0,.22);
+            max-width: 340px; width: 90%;
+        }
+        .overlay-card .spinner-border {
+            width: 3rem; height: 3rem;
+            color: #4f46e5; border-width: .25em;
+        }
+        .typing-dots { letter-spacing: .1em; }
+        .typing-dots span {
+            display: inline-block;
+            animation: dotPulse 1.4s infinite ease-in-out;
+            font-size: 1.4rem; color: #4f46e5; line-height: 1;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: .2s; }
+        .typing-dots span:nth-child(3) { animation-delay: .4s; }
+        @keyframes dotPulse {
+            0%, 80%, 100% { opacity: 0.1; transform: translateY(0); }
+            40%            { opacity: 1;   transform: translateY(-4px); }
+        }
+
+        /* ── Inline API error ── */
+        #apiErrorBox { display: none; align-items: flex-start; }
     </style>
 </head>
 <body>
@@ -120,9 +154,16 @@
     <div class="info-box mb-4 d-flex gap-2">
         <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
         <span>
-            The CSV must have a header row. Include a column with the review text — the API will detect it automatically.
+            Your CSV must have a header row with a <strong><code>review_text</code></strong> column.
+            Only that column is extracted and sent to the API.
             <strong>Max size: 20 MB.</strong>
         </span>
+    </div>
+
+    {{-- Inline API error (shown after async failure) --}}
+    <div id="apiErrorBox" class="alert alert-danger gap-2 align-items-start small mb-4" role="alert" style="display:none">
+        <i class="bi bi-x-circle-fill flex-shrink-0 mt-1"></i>
+        <div><strong>Analysis failed.</strong><br><span id="apiErrorMsg"></span></div>
     </div>
 
     {{-- ── Form ── --}}
@@ -228,6 +269,24 @@
 
 </main>
 
+{{-- ── Loading overlay ── --}}
+<div id="loadingOverlay" class="d-none">
+    <div class="overlay-card">
+        <div class="spinner-border mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <h6 class="fw-bold text-dark mb-1">Analyzing Reviews</h6>
+        <p class="text-muted small mb-2">Sending data to the API. This may take a moment…</p>
+        <div class="typing-dots mb-4">
+            <span>●</span><span>●</span><span>●</span>
+        </div>
+        <button id="cancelAnalysisBtn" type="button"
+                class="btn btn-outline-secondary btn-sm px-4">
+            <i class="bi bi-x-circle me-1"></i> Cancel
+        </button>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
@@ -241,7 +300,13 @@
     const parseErrorEl = document.getElementById('parseError');
     const submitBtn    = document.getElementById('submitBtn');
     const clearBtn     = document.getElementById('clearBtn');
+    const overlay           = document.getElementById('loadingOverlay');
+    const apiErrorBox       = document.getElementById('apiErrorBox');
+    const apiErrorMsg       = document.getElementById('apiErrorMsg');
+    const cancelAnalysisBtn = document.getElementById('cancelAnalysisBtn');
+    let   abortController   = null;
 
+    // ── Drag-and-drop ──
     if (dropZone) {
         dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
         dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
@@ -253,18 +318,18 @@
                 handleFile(fileInput.files[0]);
             }
         });
-
         fileInput.addEventListener('change', () => {
             if (fileInput.files.length) handleFile(fileInput.files[0]);
         });
-
         clearBtn.addEventListener('click', resetFile);
     }
 
     function handleFile(file) {
         dropZone.classList.add('has-file');
         dropContent.innerHTML = `
-            <div class="drop-icon mb-1" style="font-size:2rem;"><i class="bi bi-file-earmark-check" style="color:#4f46e5;"></i></div>
+            <div class="drop-icon mb-1" style="font-size:2rem;">
+                <i class="bi bi-file-earmark-check" style="color:#4f46e5;"></i>
+            </div>
             <div class="fw-semibold" style="color:#4f46e5;">${escHtml(file.name)}</div>
             <div class="text-muted small mt-1">${(file.size / 1024).toFixed(1)} KB</div>
         `;
@@ -274,12 +339,12 @@
             header: true,
             skipEmptyLines: true,
             preview: 0,
-            complete: results  => renderPreview(results, file),
-            error:   err      => showParseError(err.message),
+            complete: results => renderPreview(results),
+            error:   err     => showParseError(err.message),
         });
     }
 
-    function renderPreview(results, file) {
+    function renderPreview(results) {
         parseErrorEl.classList.add('d-none');
 
         const fields    = results.meta.fields ?? [];
@@ -292,12 +357,22 @@
             return;
         }
 
+        // Warn if review_text column is missing
+        const hasReviewText = fields.map(f => f.toLowerCase().trim()).includes('review_text');
+        if (!hasReviewText) {
+            showParseError('No "review_text" column found. Please ensure your CSV has a "review_text" header.');
+            return;
+        }
+
         csvStats.innerHTML = `
             <span class="stat-pill"><i class="bi bi-list-ul"></i> ${totalRows.toLocaleString()} rows</span>
             <span class="stat-pill"><i class="bi bi-layout-three-columns"></i> ${fields.length} columns</span>
         `;
 
-        previewHead.innerHTML = '<tr>' + fields.map(f => `<th>${escHtml(f)}</th>`).join('') + '</tr>';
+        previewHead.innerHTML = '<tr>' + fields.map(f => {
+            const isReview = f.toLowerCase().trim() === 'review_text';
+            return `<th ${isReview ? 'style="color:#4f46e5;"' : ''}>${escHtml(f)}</th>`;
+        }).join('') + '</tr>';
 
         previewBody.innerHTML = preview.map(row =>
             '<tr>' + fields.map(f => `<td>${escHtml(String(row[f] ?? ''))}</td>`).join('') + '</tr>'
@@ -338,10 +413,87 @@
         return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    document.getElementById('analysisForm')?.addEventListener('submit', function () {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending to API…';
+    // ── Cancel button ──
+    cancelAnalysisBtn?.addEventListener('click', () => {
+        if (abortController) {
+            abortController.abort();
+            abortController = null;
+        }
     });
+
+    // ── Async form submission ──
+    document.getElementById('analysisForm')?.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        // Hide any previous error
+        hideApiError();
+
+        // Create a fresh abort controller for this request
+        abortController = new AbortController();
+
+        // Auto-cancel after 5 minutes (matches ngrok + Laravel timeout)
+        const TIMEOUT_MS = 5 * 60 * 1000;
+        const autoTimeout = setTimeout(() => abortController.abort('timeout'), TIMEOUT_MS);
+
+        overlay.classList.remove('d-none');
+        submitBtn.disabled = true;
+
+        try {
+            const response = await fetch(this.action, {
+                method:  'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept':           'application/json',
+                },
+                body:   new FormData(this),
+                signal: abortController.signal,
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                window.location.href = data.redirect;
+            } else {
+                hideOverlay();
+                if (data.errors) {
+                    showApiError(Object.values(data.errors).flat()[0]);
+                } else {
+                    showApiError(data.error ?? 'An unexpected error occurred.');
+                }
+            }
+        } catch (err) {
+            hideOverlay();
+            if (err.name === 'AbortError') {
+                const isTimeout = abortController?.signal?.reason === 'timeout';
+                if (isTimeout) {
+                    showApiError('Request timed out after 5 minutes. The server may still be processing — check your dashboard shortly.');
+                } else {
+                    showApiError('Analysis cancelled. You can try again whenever you\'re ready.', 'warning');
+                }
+            } else {
+                showApiError('Network error — could not reach the server. Please try again.');
+            }
+        } finally {
+            clearTimeout(autoTimeout);
+            abortController = null;
+        }
+    });
+
+    function hideOverlay() {
+        overlay.classList.add('d-none');
+        submitBtn.disabled = false;
+    }
+
+    function showApiError(msg, type = 'danger') {
+        apiErrorBox.className = `alert alert-${type} gap-2 align-items-start small mb-4`;
+        apiErrorBox.style.display = 'flex';
+        apiErrorMsg.textContent = msg;
+        apiErrorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function hideApiError() {
+        apiErrorBox.style.display = 'none';
+    }
 </script>
 </body>
 </html>

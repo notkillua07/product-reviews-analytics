@@ -17,9 +17,10 @@
             border-radius: 1rem; padding: 1.5rem;
         }
         .section-title {
-            font-size: .72rem; font-weight: 700;
+            font-size: .7rem; font-weight: 700;
             letter-spacing: .07em; text-transform: uppercase;
             color: #94a3b8; margin-bottom: 1rem;
+            display: flex; align-items: center; gap: .4rem;
         }
 
         /* Stat tiles */
@@ -27,26 +28,38 @@
         .stat-tile .lbl { font-size: .75rem; color: #64748b; margin-top: .2rem; }
 
         /* Sentiment bars */
-        .sent-bar { height: 10px; border-radius: 999px; background: #f1f5f9; overflow: hidden; }
+        .sent-bar { height: 8px; border-radius: 999px; background: #f1f5f9; overflow: hidden; }
         .sent-bar-fill { height: 100%; border-radius: 999px; }
 
-        /* Negative reasons */
+        /* Reason cards */
         .reason-card {
-            display: flex; align-items: flex-start; gap: 1rem;
-            border: 1px solid #fee2e2; border-radius: .75rem;
-            background: #fff5f5; padding: 1rem 1.1rem;
+            display: flex; align-items: flex-start; gap: .85rem;
+            border-radius: .65rem; padding: .85rem 1rem;
+            margin-bottom: .6rem;
         }
+        .reason-card:last-child { margin-bottom: 0; }
+
+        /* Product reasons — red theme */
+        .reason-card.product-reason { border: 1px solid #fee2e2; background: #fff5f5; }
+        .product-reason .reason-rank { background: #ef4444; }
+        .product-reason .reason-rank.r2 { background: #f97316; }
+        .product-reason .reason-rank.r3 { background: #f59e0b; }
+        .product-reason .reason-count { color: #ef4444; }
+
+        /* Shipping reasons — amber theme */
+        .reason-card.shipping-reason { border: 1px solid #fde68a; background: #fffbeb; }
+        .shipping-reason .reason-rank { background: #f59e0b; }
+        .shipping-reason .reason-rank.r2 { background: #fbbf24; }
+        .shipping-reason .reason-rank.r3 { background: #fcd34d; color: #78350f; }
+        .shipping-reason .reason-count { color: #d97706; }
+
         .reason-rank {
-            width: 32px; height: 32px; border-radius: 999px;
-            background: #ef4444; color: #fff;
-            font-weight: 800; font-size: .85rem;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
+            width: 28px; height: 28px; border-radius: 999px;
+            color: #fff; font-weight: 800; font-size: .8rem;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .reason-rank.rank-2 { background: #f97316; }
-        .reason-rank.rank-3 { background: #f59e0b; }
-        .reason-text { font-weight: 600; font-size: .9rem; color: #1e293b; line-height: 1.4; }
-        .reason-count { font-size: .78rem; color: #ef4444; font-weight: 600; margin-top: .2rem; }
+        .reason-text { font-weight: 600; font-size: .87rem; color: #1e293b; line-height: 1.4; }
+        .reason-count { font-size: .74rem; font-weight: 600; margin-top: .2rem; }
 
         /* Reviews table */
         .table > :not(caption) > * > * { padding: .8rem 1rem; }
@@ -67,6 +80,9 @@
         }
         .filter-tabs .nav-link.active { background: #4f46e5; color: #fff; }
         .filter-tabs .nav-link:not(.active):hover { background: #f1f5f9; }
+
+        /* Empty reason state */
+        .reason-empty { color: #94a3b8; font-size: .82rem; }
 
         @media print {
             .navbar, .btn, form, .filter-tabs { display: none !important; }
@@ -116,10 +132,16 @@
             <h1 class="h4 fw-bold mb-1">{{ $analysis->product_name }}</h1>
             <span class="text-muted small">
                 <i class="bi bi-calendar3 me-1"></i>Analyzed on {{ $analysis->created_at->format('d M Y, H:i') }}
+                @if ($analysis->product?->category)
+                    &nbsp;·&nbsp;
+                    <span class="badge" style="background:#ede9fe;color:#6d28d9;font-size:.72rem;">
+                        {{ $analysis->product->category->name }}
+                    </span>
+                @endif
             </span>
         </div>
         @php
-            $verdict = $analysis->positive_count >= $analysis->negative_count ? 'Mostly Positive' : 'Mostly Negative';
+            $verdict      = $analysis->positive_count >= $analysis->negative_count ? 'Mostly Positive' : 'Mostly Negative';
             $verdictClass = $analysis->positive_count >= $analysis->negative_count ? 'badge-pos' : 'badge-neg';
         @endphp
         <span class="badge rounded-pill px-3 py-2 {{ $verdictClass }}" style="font-size:.85rem;">
@@ -140,7 +162,9 @@
         <div class="col-4">
             <div class="section-card text-center">
                 <div class="stat-tile">
-                    <div class="num" style="color:#16a34a;">{{ $analysis->positivePercent() }}<span style="font-size:1rem;">%</span></div>
+                    <div class="num" style="color:#16a34a;">
+                        {{ $analysis->positivePercent() }}<span style="font-size:1rem;">%</span>
+                    </div>
                     <div class="lbl">Positive</div>
                 </div>
             </div>
@@ -148,29 +172,30 @@
         <div class="col-4">
             <div class="section-card text-center">
                 <div class="stat-tile">
-                    <div class="num" style="color:#dc2626;">{{ $analysis->negativePercent() }}<span style="font-size:1rem;">%</span></div>
+                    <div class="num" style="color:#dc2626;">
+                        {{ $analysis->negativePercent() }}<span style="font-size:1rem;">%</span>
+                    </div>
                     <div class="lbl">Negative</div>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- ── Top 3 Negative Reasons + Sentiment bars ── --}}
+    {{-- ── Negative Reason Categories ── --}}
     <div class="row g-3 mb-4">
 
-        {{-- Top 3 Negative Reasons --}}
-        <div class="col-lg-7">
+        {{-- Product Issues --}}
+        <div class="col-lg-6">
             <div class="section-card h-100">
                 <p class="section-title">
-                    <i class="bi bi-exclamation-triangle-fill me-1" style="color:#ef4444;"></i>
-                    Top 3 Negative Sentiment Reasons
+                    <i class="bi bi-box-seam-fill" style="color:#ef4444;"></i>
+                    Product Issues
                 </p>
 
-                @if (!empty($analysis->top_negative_reasons))
-                    <div class="d-flex flex-column gap-3">
-                        @foreach ($analysis->top_negative_reasons as $i => $reason)
-                        <div class="reason-card">
-                            <div class="reason-rank {{ $i === 1 ? 'rank-2' : ($i === 2 ? 'rank-3' : '') }}">
+                @if (!empty($analysis->product_reasons))
+                    @foreach ($analysis->product_reasons as $i => $reason)
+                        <div class="reason-card product-reason">
+                            <div class="reason-rank {{ $i === 1 ? 'r2' : ($i === 2 ? 'r3' : '') }}">
                                 {{ $i + 1 }}
                             </div>
                             <div>
@@ -178,58 +203,86 @@
                                 @if (!empty($reason['count']))
                                     <div class="reason-count">
                                         <i class="bi bi-chat-left-text-fill me-1"></i>
-                                        Mentioned in {{ $reason['count'] }} {{ Str::plural('review', $reason['count']) }}
+                                        {{ $reason['count'] }} {{ Str::plural('mention', $reason['count']) }}
                                     </div>
                                 @endif
                             </div>
                         </div>
-                        @endforeach
-                    </div>
+                    @endforeach
                 @else
-                    <p class="text-muted small mb-0">No negative reasons returned by the API.</p>
+                    <p class="reason-empty mb-0">No product-related issues found.</p>
                 @endif
             </div>
         </div>
 
-        {{-- Sentiment breakdown --}}
-        <div class="col-lg-5">
+        {{-- Shipping Issues --}}
+        <div class="col-lg-6">
             <div class="section-card h-100">
                 <p class="section-title">
-                    <i class="bi bi-bar-chart-fill me-1"></i>Sentiment Breakdown
+                    <i class="bi bi-truck" style="color:#d97706;"></i>
+                    Shipping Issues
                 </p>
 
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between small mb-1">
-                        <span class="fw-semibold" style="color:#15803d;">
-                            <i class="bi bi-emoji-smile-fill me-1"></i>Positive
-                        </span>
-                        <span class="fw-bold">
-                            {{ $analysis->positive_count }}
-                            <span class="text-muted fw-normal">({{ $analysis->positivePercent() }}%)</span>
-                        </span>
-                    </div>
-                    <div class="sent-bar">
-                        <div class="sent-bar-fill" style="width:{{ $analysis->positivePercent() }}%; background:#22c55e;"></div>
-                    </div>
-                </div>
-
-                <div class="mb-1">
-                    <div class="d-flex justify-content-between small mb-1">
-                        <span class="fw-semibold" style="color:#dc2626;">
-                            <i class="bi bi-emoji-frown-fill me-1"></i>Negative
-                        </span>
-                        <span class="fw-bold">
-                            {{ $analysis->negative_count }}
-                            <span class="text-muted fw-normal">({{ $analysis->negativePercent() }}%)</span>
-                        </span>
-                    </div>
-                    <div class="sent-bar">
-                        <div class="sent-bar-fill" style="width:{{ $analysis->negativePercent() }}%; background:#ef4444;"></div>
-                    </div>
-                </div>
+                @if (!empty($analysis->shipping_reasons))
+                    @foreach ($analysis->shipping_reasons as $i => $reason)
+                        <div class="reason-card shipping-reason">
+                            <div class="reason-rank {{ $i === 1 ? 'r2' : ($i === 2 ? 'r3' : '') }}">
+                                {{ $i + 1 }}
+                            </div>
+                            <div>
+                                <div class="reason-text">{{ $reason['reason'] }}</div>
+                                @if (!empty($reason['count']))
+                                    <div class="reason-count">
+                                        <i class="bi bi-chat-left-text-fill me-1"></i>
+                                        {{ $reason['count'] }} {{ Str::plural('mention', $reason['count']) }}
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                @else
+                    <p class="reason-empty mb-0">No shipping-related issues found.</p>
+                @endif
             </div>
         </div>
 
+    </div>
+
+    {{-- ── Sentiment Breakdown ── --}}
+    <div class="section-card mb-4">
+        <p class="section-title">
+            <i class="bi bi-bar-chart-fill"></i>Sentiment Breakdown
+        </p>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="fw-semibold" style="color:#15803d;">
+                        <i class="bi bi-emoji-smile-fill me-1"></i>Positive
+                    </span>
+                    <span class="fw-bold">
+                        {{ $analysis->positive_count }}
+                        <span class="text-muted fw-normal">({{ $analysis->positivePercent() }}%)</span>
+                    </span>
+                </div>
+                <div class="sent-bar">
+                    <div class="sent-bar-fill" style="width:{{ $analysis->positivePercent() }}%; background:#22c55e;"></div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="fw-semibold" style="color:#dc2626;">
+                        <i class="bi bi-emoji-frown-fill me-1"></i>Negative
+                    </span>
+                    <span class="fw-bold">
+                        {{ $analysis->negative_count }}
+                        <span class="text-muted fw-normal">({{ $analysis->negativePercent() }}%)</span>
+                    </span>
+                </div>
+                <div class="sent-bar">
+                    <div class="sent-bar-fill" style="width:{{ $analysis->negativePercent() }}%; background:#ef4444;"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     {{-- ── Reviews list ── --}}
@@ -266,15 +319,15 @@
                 <table class="table table-hover mb-0" id="reviewsTable">
                     <thead>
                         <tr>
-                            <th style="width:40px;">#</th>
+                            <th style="width:50px;">#</th>
                             <th>Review</th>
                             <th style="width:120px;" class="text-center">Sentiment</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($analysis->reviews_data as $i => $review)
+                        @foreach ($analysis->reviews_data as $review)
                         <tr data-sentiment="{{ $review['label'] ?? 'unknown' }}">
-                            <td class="text-muted small">{{ $i + 1 }}</td>
+                            <td class="text-muted small">{{ $review['id'] ?? ($loop->index) }}</td>
                             <td class="small">{{ $review['text'] }}</td>
                             <td class="text-center">
                                 @if (($review['label'] ?? '') === 'positive')
@@ -301,7 +354,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Filter reviews table by sentiment
     document.querySelectorAll('#reviewFilter .nav-link').forEach(tab => {
         tab.addEventListener('click', function (e) {
             e.preventDefault();
@@ -310,8 +362,7 @@
 
             const filter = this.dataset.filter;
             document.querySelectorAll('#reviewsTable tbody tr').forEach(row => {
-                const sentiment = row.dataset.sentiment;
-                row.style.display = (filter === 'all' || sentiment === filter) ? '' : 'none';
+                row.style.display = (filter === 'all' || row.dataset.sentiment === filter) ? '' : 'none';
             });
         });
     });

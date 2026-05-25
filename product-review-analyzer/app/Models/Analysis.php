@@ -17,13 +17,15 @@ class Analysis extends Model
         'total_reviews',
         'positive_count',
         'negative_count',
-        'top_negative_reasons',
+        'product_reasons',
+        'shipping_reasons',
         'reviews_data',
     ];
 
     protected $casts = [
-        'top_negative_reasons' => 'array',
-        'reviews_data'         => 'array',
+        'product_reasons'  => 'array',
+        'shipping_reasons' => 'array',
+        'reviews_data'     => 'array',
     ];
 
     public function user(): BelongsTo

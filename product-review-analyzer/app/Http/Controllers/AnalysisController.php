@@ -63,6 +63,8 @@ class AnalysisController extends Controller
 
     public function store(Request $request)
     {
+        $isAjax = $request->ajax() || $request->expectsJson();
+
         $request->validate([
             'product_id' => ['required', 'exists:products,id'],
             'csv_file'   => ['required', 'file', 'mimes:csv,txt', 'max:20480'],
@@ -74,19 +76,31 @@ class AnalysisController extends Controller
         try {
             $result = $this->apiService->analyze($product->name, $request->file('csv_file'));
         } catch (Throwable $e) {
+            if ($isAjax) {
+                return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
+            }
             return back()->withInput()->withErrors(['api' => $e->getMessage()]);
         }
 
         Analysis::create([
-            'user_id'              => Auth::id(),
-            'product_id'           => $product->id,
-            'product_name'         => $product->name,
-            'total_reviews'        => $result['total_reviews'],
-            'positive_count'       => $result['positive_count'],
-            'negative_count'       => $result['negative_count'],
-            'top_negative_reasons' => $result['top_negative_reasons'],
-            'reviews_data'         => $result['reviews_data'],
+            'user_id'          => Auth::id(),
+            'product_id'       => $product->id,
+            'product_name'     => $product->name,
+            'total_reviews'    => $result['total_reviews'],
+            'positive_count'   => $result['positive_count'],
+            'negative_count'   => $result['negative_count'],
+            'product_reasons'  => $result['product_reasons'],
+            'shipping_reasons' => $result['shipping_reasons'],
+            'reviews_data'     => $result['reviews_data'],
         ]);
+
+        if ($isAjax) {
+            return response()->json([
+                'success'  => true,
+                'redirect' => route('home'),
+                'message'  => 'Analysis complete!',
+            ]);
+        }
 
         return redirect()->route('home')->with('success', 'Analysis complete!');
     }
