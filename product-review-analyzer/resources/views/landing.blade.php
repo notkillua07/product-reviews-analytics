@@ -60,6 +60,36 @@
             background-image: radial-gradient(circle at 70% 50%, rgba(99,102,241,.18) 0%, transparent 60%),
                               radial-gradient(circle at 20% 80%, rgba(139,92,246,.12) 0%, transparent 50%);
         }
+
+        /* Floating decorative orbs */
+        .hero-orb {
+            position: absolute;
+            border-radius: 999px;
+            filter: blur(90px);
+            pointer-events: none;
+            opacity: 0;
+            animation: orbFloat var(--orb-dur, 10s) var(--orb-delay, 0s) ease-in-out infinite,
+                       orbFadeIn 1.2s var(--orb-fi-delay, 0.3s) ease forwards;
+        }
+        .hero-orb-1 {
+            --orb-dur: 9s; --orb-delay: 0s; --orb-fi-delay: 0.3s;
+            width: 420px; height: 420px;
+            background: radial-gradient(circle, rgba(99,102,241,.6), transparent 70%);
+            top: -120px; right: -60px;
+        }
+        .hero-orb-2 {
+            --orb-dur: 12s; --orb-delay: 2s; --orb-fi-delay: 0.6s;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(139,92,246,.5), transparent 70%);
+            bottom: -80px; left: 8%;
+        }
+        .hero-orb-3 {
+            --orb-dur: 15s; --orb-delay: 1s; --orb-fi-delay: 0.9s;
+            width: 180px; height: 180px;
+            background: radial-gradient(circle, rgba(167,139,250,.45), transparent 70%);
+            top: 40%; left: 42%;
+        }
+
         .hero-badge {
             display: inline-flex;
             align-items: center;
@@ -71,22 +101,32 @@
             font-size: 0.8rem;
             color: #c7d2fe;
             margin-bottom: 1.5rem;
+            animation: fadeSlideUp 0.55s ease both,
+                       badgePulse 3.5s 1.2s ease-in-out infinite;
         }
         .hero h1 {
             font-size: clamp(2.2rem, 5vw, 3.5rem);
             font-weight: 800;
             line-height: 1.15;
             color: #fff;
+            animation: fadeSlideUp 0.6s 0.12s ease both;
         }
         .hero h1 span {
             background: linear-gradient(90deg, #a5b4fc, #818cf8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .hero p {
+        .hero-sub {
             color: #94a3b8;
             font-size: 1.1rem;
             max-width: 520px;
+            animation: fadeSlideUp 0.6s 0.24s ease both;
+        }
+        .hero-btns {
+            animation: fadeSlideUp 0.6s 0.38s ease both;
+        }
+        .hero-note {
+            animation: fadeSlideUp 0.55s 0.5s ease both;
         }
         .hero-mockup {
             background: rgba(255,255,255,.04);
@@ -94,6 +134,7 @@
             border-radius: 1rem;
             padding: 1.5rem;
             backdrop-filter: blur(4px);
+            animation: slideInRight 0.75s 0.22s ease both;
         }
         .sentiment-bar-wrap { margin-bottom: 0.6rem; }
         .sentiment-label { font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; }
@@ -103,7 +144,12 @@
             background: rgba(255,255,255,.08);
             overflow: hidden;
         }
-        .sentiment-bar-fill { height: 100%; border-radius: 999px; }
+        .sentiment-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            width: 0;
+            transition: width 1.3s cubic-bezier(.25, 1, .5, 1);
+        }
         .review-chip {
             background: rgba(255,255,255,.06);
             border: 1px solid rgba(255,255,255,.1);
@@ -112,6 +158,13 @@
             font-size: 0.75rem;
             color: #cbd5e1;
             margin-bottom: 0.5rem;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .review-chip.chip-visible {
+            opacity: 1;
+            transform: translateY(0);
         }
         .star { color: #fbbf24; font-size: 0.75rem; }
 
@@ -157,18 +210,24 @@
             justify-content: center;
             font-size: 1.4rem;
             margin-bottom: 1rem;
+            transition: transform 0.3s ease, background 0.3s ease;
         }
         .feature-card {
             border: 1px solid #e2e8f0;
             border-radius: 1rem;
             padding: 1.75rem;
             height: 100%;
-            transition: box-shadow .2s, transform .2s;
+            transition: box-shadow .25s, transform .25s, border-color .25s;
             background: #fff;
         }
         .feature-card:hover {
-            box-shadow: 0 8px 28px rgba(79,70,229,.1);
-            transform: translateY(-3px);
+            box-shadow: 0 12px 36px rgba(79,70,229,.12);
+            transform: translateY(-5px);
+            border-color: #c7d2fe;
+        }
+        .feature-card:hover .feature-icon {
+            transform: scale(1.1) rotate(-4deg);
+            background: #e0e7ff;
         }
 
         /* ── How it works ── */
@@ -185,6 +244,11 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .step-wrap:hover .step-number {
+            transform: scale(1.12);
+            box-shadow: 0 4px 16px rgba(79,70,229,.35);
         }
         .step-connector {
             width: 2px;
@@ -200,6 +264,12 @@
             padding: 1.75rem;
             background: #fff;
             height: 100%;
+            transition: box-shadow .25s, transform .25s, border-color .25s;
+        }
+        .testimonial-card:hover {
+            box-shadow: 0 10px 32px rgba(0,0,0,.07);
+            transform: translateY(-4px);
+            border-color: #e0e7ff;
         }
         .avatar {
             width: 40px;
@@ -227,6 +297,45 @@
             font-size: 0.875rem;
             padding: 2rem 0;
         }
+
+        /* ── Keyframe definitions ── */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(28px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(48px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes orbFloat {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50%       { transform: translateY(-28px) scale(1.04); }
+        }
+        @keyframes orbFadeIn {
+            to { opacity: 0.32; }
+        }
+        @keyframes badgePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(129,140,248,0); }
+            50%       { box-shadow: 0 0 0 7px rgba(129,140,248,.12); }
+        }
+
+        /* ── Scroll-reveal ── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(32px);
+            transition: opacity 0.65s ease, transform 0.65s ease;
+        }
+        .reveal.from-left  { transform: translateX(-32px); }
+        .reveal.from-right { transform: translateX(32px); }
+        .reveal.scale-up   { transform: scale(0.91) translateY(14px); }
+        .reveal.visible    { opacity: 1; transform: none; }
+
+        .delay-1 { transition-delay: .1s; }
+        .delay-2 { transition-delay: .2s; }
+        .delay-3 { transition-delay: .3s; }
+        .delay-4 { transition-delay: .4s; }
+        .delay-5 { transition-delay: .5s; }
+        .delay-6 { transition-delay: .6s; }
 
         /* smooth scroll */
         html { scroll-behavior: smooth; }
@@ -274,6 +383,11 @@
          HERO
     ═══════════════════════════════════════ --}}
     <section class="hero">
+        {{-- Floating orbs --}}
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-orb hero-orb-3"></div>
+
         <div class="container position-relative">
             <div class="row align-items-center g-5">
 
@@ -284,10 +398,10 @@
                         AI-powered review intelligence
                     </div>
                     <h1>Turn Customer Reviews into <span>Actionable Insights</span></h1>
-                    <p class="mt-3 mb-4">
+                    <p class="mt-3 mb-4 hero-sub">
                         Automatically analyze sentiment, extract key themes, and track rating trends across all your product reviews — in one clean dashboard.
                     </p>
-                    <div class="d-flex flex-wrap gap-3">
+                    <div class="d-flex flex-wrap gap-3 hero-btns">
                         <a href="{{ route('login') }}" class="btn btn-indigo btn-lg px-4 fw-semibold">
                             Get started <i class="bi bi-arrow-right ms-1"></i>
                         </a>
@@ -299,7 +413,7 @@
                             </button>
                         </form>
                     </div>
-                    <p class="mt-3" style="font-size:.8rem;color:#64748b;">
+                    <p class="mt-3 hero-note" style="font-size:.8rem;color:#64748b;">
                         No credit card required &nbsp;·&nbsp; Guest access available
                     </p>
                 </div>
@@ -312,32 +426,26 @@
                         <div class="sentiment-bar-wrap">
                             <div class="sentiment-label">Positive</div>
                             <div class="sentiment-bar">
-                                <div class="sentiment-bar-fill" style="width:72%;background:linear-gradient(90deg,#22c55e,#4ade80)"></div>
-                            </div>
-                        </div>
-                        <div class="sentiment-bar-wrap">
-                            <div class="sentiment-label">Neutral</div>
-                            <div class="sentiment-bar">
-                                <div class="sentiment-bar-fill" style="width:18%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div>
+                                <div class="sentiment-bar-fill" data-fill="72%" style="background:linear-gradient(90deg,#22c55e,#4ade80)"></div>
                             </div>
                         </div>
                         <div class="sentiment-bar-wrap mb-4">
                             <div class="sentiment-label">Negative</div>
                             <div class="sentiment-bar">
-                                <div class="sentiment-bar-fill" style="width:10%;background:linear-gradient(90deg,#ef4444,#f87171)"></div>
+                                <div class="sentiment-bar-fill" data-fill="28%" style="background:linear-gradient(90deg,#ef4444,#f87171)"></div>
                             </div>
                         </div>
 
                         <p class="mb-2" style="color:#94a3b8;font-size:.75rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Latest Reviews</p>
 
-                        <div class="review-chip">
+                        <div class="review-chip" id="chip1">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span style="color:#e2e8f0;font-weight:600;">Wireless Headphones X3</span>
                                 <span class="star">★★★★★</span>
                             </div>
                             "Amazing sound quality, battery lasts all day. Best purchase this year!"
                         </div>
-                        <div class="review-chip">
+                        <div class="review-chip" id="chip2">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span style="color:#e2e8f0;font-weight:600;">Smart Watch Pro</span>
                                 <span><span class="star">★★★★</span><span style="color:#475569;font-size:.75rem;">★</span></span>
@@ -347,12 +455,12 @@
 
                         <div class="d-flex gap-3 mt-4">
                             <div style="flex:1;background:rgba(255,255,255,.05);border-radius:.6rem;padding:.8rem;text-align:center;">
-                                <div style="font-size:1.3rem;font-weight:800;color:#a5b4fc;">4.6</div>
-                                <div style="font-size:.7rem;color:#64748b;">Avg Rating</div>
-                            </div>
-                            <div style="flex:1;background:rgba(255,255,255,.05);border-radius:.6rem;padding:.8rem;text-align:center;">
                                 <div style="font-size:1.3rem;font-weight:800;color:#4ade80;">72%</div>
                                 <div style="font-size:.7rem;color:#64748b;">Positive</div>
+                            </div>
+                            <div style="flex:1;background:rgba(255,255,255,.05);border-radius:.6rem;padding:.8rem;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:800;color:#f87171;">28%</div>
+                                <div style="font-size:.7rem;color:#64748b;">Negative</div>
                             </div>
                             <div style="flex:1;background:rgba(255,255,255,.05);border-radius:.6rem;padding:.8rem;text-align:center;">
                                 <div style="font-size:1.3rem;font-weight:800;color:#f8fafc;">1.2k</div>
@@ -372,27 +480,21 @@
     <div class="stats-bar">
         <div class="container">
             <div class="row justify-content-center g-0">
-                <div class="col-6 col-sm-3">
+                <div class="col-6 col-sm-3 reveal">
                     <div class="stat-item">
-                        <div class="stat-num">50k+</div>
+                        <div class="stat-num" data-count="50" data-suffix="k+">50k+</div>
                         <div class="stat-desc">Reviews analyzed</div>
                     </div>
                 </div>
-                <div class="col-6 col-sm-3">
+                <div class="col-6 col-sm-3 reveal delay-1">
                     <div class="stat-item">
-                        <div class="stat-num">98%</div>
+                        <div class="stat-num" data-count="97" data-suffix="%">97%</div>
                         <div class="stat-desc">Sentiment accuracy</div>
                     </div>
                 </div>
-                <div class="col-6 col-sm-3">
+                <div class="col-6 col-sm-3 reveal delay-2">
                     <div class="stat-item">
-                        <div class="stat-num">3s</div>
-                        <div class="stat-desc">Average analysis time</div>
-                    </div>
-                </div>
-                <div class="col-6 col-sm-3">
-                    <div class="stat-item">
-                        <div class="stat-num">500+</div>
+                        <div class="stat-num" data-count="500" data-suffix="+">500+</div>
                         <div class="stat-desc">Products tracked</div>
                     </div>
                 </div>
@@ -405,7 +507,7 @@
     ═══════════════════════════════════════ --}}
     <section id="features" class="py-6" style="padding: 5rem 0;">
         <div class="container">
-            <div class="text-center mb-5">
+            <div class="text-center mb-5 reveal">
                 <p class="section-label">Features</p>
                 <h2 class="fw-bold fs-2 mt-2">Everything you need to understand your customers</h2>
                 <p class="text-muted mt-2" style="max-width:520px;margin:auto;">
@@ -414,7 +516,7 @@
             </div>
 
             <div class="row g-4">
-                <div class="col-md-6 col-lg-4">
+                <div class="col-md-6 col-lg-4 reveal delay-1">
                     <div class="feature-card">
                         <div class="feature-icon"><i class="bi bi-emoji-smile"></i></div>
                         <h5 class="fw-bold mb-2">Sentiment Analysis</h5>
@@ -423,7 +525,7 @@
                         </p>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4">
+                <div class="col-md-6 col-lg-4 reveal delay-2">
                     <div class="feature-card">
                         <div class="feature-icon"><i class="bi bi-graph-up-arrow"></i></div>
                         <h5 class="fw-bold mb-2">Rating Trends</h5>
@@ -432,7 +534,7 @@
                         </p>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4">
+                <div class="col-md-6 col-lg-4 reveal delay-3">
                     <div class="feature-card">
                         <div class="feature-icon"><i class="bi bi-tags"></i></div>
                         <h5 class="fw-bold mb-2">Keyword Extraction</h5>
@@ -441,7 +543,7 @@
                         </p>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4">
+                <div class="col-md-6 col-lg-4 reveal delay-1">
                     <div class="feature-card">
                         <div class="feature-icon"><i class="bi bi-bar-chart-steps"></i></div>
                         <h5 class="fw-bold mb-2">Comparative Analysis</h5>
@@ -450,7 +552,7 @@
                         </p>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4">
+                <div class="col-md-6 col-lg-4 reveal delay-2">
                     <div class="feature-card">
                         <div class="feature-icon"><i class="bi bi-bell"></i></div>
                         <h5 class="fw-bold mb-2">Review Monitoring</h5>
@@ -459,7 +561,7 @@
                         </p>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4">
+                <div class="col-md-6 col-lg-4 reveal delay-3">
                     <div class="feature-card">
                         <div class="feature-icon"><i class="bi bi-file-earmark-bar-graph"></i></div>
                         <h5 class="fw-bold mb-2">Exportable Reports</h5>
@@ -477,7 +579,7 @@
     ═══════════════════════════════════════ --}}
     <section id="how-it-works" class="how-section py-5" style="padding: 5rem 0 !important;">
         <div class="container">
-            <div class="text-center mb-5">
+            <div class="text-center mb-5 reveal">
                 <p class="section-label">How it works</p>
                 <h2 class="fw-bold fs-2 mt-2">From raw reviews to clear insights in minutes</h2>
             </div>
@@ -485,7 +587,7 @@
             <div class="row justify-content-center g-4">
                 <div class="col-md-8 col-lg-6">
 
-                    <div class="d-flex gap-3 align-items-start">
+                    <div class="d-flex gap-3 align-items-start step-wrap reveal from-left">
                         <div class="d-flex flex-column align-items-center">
                             <div class="step-number">1</div>
                             <div class="step-connector" style="height:48px;"></div>
@@ -496,7 +598,7 @@
                         </div>
                     </div>
 
-                    <div class="d-flex gap-3 align-items-start">
+                    <div class="d-flex gap-3 align-items-start step-wrap reveal from-left delay-1">
                         <div class="d-flex flex-column align-items-center">
                             <div class="step-number">2</div>
                             <div class="step-connector" style="height:48px;"></div>
@@ -507,7 +609,7 @@
                         </div>
                     </div>
 
-                    <div class="d-flex gap-3 align-items-start">
+                    <div class="d-flex gap-3 align-items-start step-wrap reveal from-left delay-2">
                         <div class="d-flex flex-column align-items-center">
                             <div class="step-number">3</div>
                             <div class="step-connector" style="height:48px;"></div>
@@ -518,7 +620,7 @@
                         </div>
                     </div>
 
-                    <div class="d-flex gap-3 align-items-start">
+                    <div class="d-flex gap-3 align-items-start step-wrap reveal from-left delay-3">
                         <div class="d-flex flex-column align-items-center">
                             <div class="step-number">4</div>
                         </div>
@@ -538,13 +640,13 @@
     ═══════════════════════════════════════ --}}
     <section id="testimonials" style="padding: 5rem 0; background:#fff;">
         <div class="container">
-            <div class="text-center mb-5">
+            <div class="text-center mb-5 reveal">
                 <p class="section-label">Testimonials</p>
                 <h2 class="fw-bold fs-2 mt-2">Loved by product teams</h2>
             </div>
 
             <div class="row g-4">
-                <div class="col-md-4">
+                <div class="col-md-4 reveal scale-up delay-1">
                     <div class="testimonial-card">
                         <div class="mb-3" style="color:#fbbf24;font-size:.9rem;">★★★★★</div>
                         <p class="text-muted small mb-4">
@@ -559,7 +661,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4 reveal scale-up delay-2">
                     <div class="testimonial-card">
                         <div class="mb-3" style="color:#fbbf24;font-size:.9rem;">★★★★★</div>
                         <p class="text-muted small mb-4">
@@ -574,7 +676,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4 reveal scale-up delay-3">
                     <div class="testimonial-card">
                         <div class="mb-3" style="color:#fbbf24;font-size:.9rem;">★★★★☆</div>
                         <p class="text-muted small mb-4">
@@ -597,7 +699,7 @@
          CTA
     ═══════════════════════════════════════ --}}
     <section class="cta-section text-center">
-        <div class="container" style="max-width:600px;">
+        <div class="container reveal" style="max-width:600px;">
             <h2 class="fw-bold text-white fs-2 mb-3">Ready to understand your customers?</h2>
             <p class="text-white-50 mb-4">
                 Jump straight into the dashboard — no setup required. Start with a free guest session or create an account.
@@ -637,10 +739,63 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Add shadow to navbar on scroll
+        /* ── Navbar scroll shadow ── */
         window.addEventListener('scroll', () => {
             document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 10);
         });
+
+        /* ── Sentiment bars: animate on load ── */
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.querySelectorAll('.sentiment-bar-fill[data-fill]').forEach(el => {
+                    el.style.width = el.dataset.fill;
+                });
+            }, 500);
+
+            setTimeout(() => {
+                document.getElementById('chip1')?.classList.add('chip-visible');
+            }, 900);
+            setTimeout(() => {
+                document.getElementById('chip2')?.classList.add('chip-visible');
+            }, 1150);
+        });
+
+        /* ── Scroll reveal via IntersectionObserver ── */
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        /* ── Count-up animation for stat numbers ── */
+        const countObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const el = entry.target;
+                const target  = parseFloat(el.dataset.count);
+                const suffix  = el.dataset.suffix ?? '';
+                const duration = 1600;
+                let startTime = null;
+
+                const step = (ts) => {
+                    if (!startTime) startTime = ts;
+                    const progress = Math.min((ts - startTime) / duration, 1);
+                    const ease = 1 - Math.pow(1 - progress, 3);
+                    el.textContent = Math.floor(ease * target) + suffix;
+                    if (progress < 1) requestAnimationFrame(step);
+                };
+
+                requestAnimationFrame(step);
+                countObserver.unobserve(el);
+            });
+        }, { threshold: 0.6 });
+
+        document.querySelectorAll('[data-count]').forEach(el => countObserver.observe(el));
     </script>
 </body>
 </html>
