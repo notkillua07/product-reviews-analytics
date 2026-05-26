@@ -84,8 +84,13 @@
         /* Empty reason state */
         .reason-empty { color: #94a3b8; font-size: .82rem; }
 
+        /* Pagination */
+        .pagination .page-link { font-size: .8rem; padding: .3rem .6rem; color: #4f46e5; }
+        .pagination .page-item.active .page-link { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+        .pagination .page-item.disabled .page-link { color: #cbd5e1; }
+
         @media print {
-            .navbar, .btn, form, .filter-tabs { display: none !important; }
+            .navbar, .btn, form, .filter-tabs, #paginationContainer { display: none !important; }
             body { background: #fff !important; }
         }
     </style>
@@ -105,8 +110,8 @@
             <span class="fw-bold text-dark small">ReviewAnalyzer</span>
         </a>
         <div class="d-flex gap-2">
-            <button onclick="window.print()" class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex align-items-center gap-1">
-                <i class="bi bi-printer"></i> Print
+            <button onclick="exportPDF()" id="exportBtn" class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex align-items-center gap-1">
+                <i class="bi bi-file-earmark-pdf"></i> Export PDF
             </button>
             <form method="POST" action="{{ route('analysis.destroy', $analysis) }}"
                   onsubmit="return confirm('Delete this analysis permanently?')">
@@ -125,6 +130,8 @@
     <a href="{{ route('home') }}" class="text-muted small text-decoration-none d-inline-flex align-items-center gap-1 mb-4">
         <i class="bi bi-arrow-left"></i> Back to Dashboard
     </a>
+
+    <div id="pdf-summary">
 
     {{-- Header --}}
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-4">
@@ -285,6 +292,8 @@
         </div>
     </div>
 
+    </div>{{-- /pdf-summary --}}
+
     {{-- ── Reviews list ── --}}
     <div class="section-card shadow-sm" style="padding: 0; overflow: hidden;">
         <div class="px-4 py-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2"
@@ -348,24 +357,211 @@
         @else
             <p class="text-muted small p-4 mb-0">No review data available.</p>
         @endif
+
+        {{-- Pagination bar --}}
+        @if (!empty($analysis->reviews_data))
+        <div class="px-4 py-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2"
+             id="paginationContainer" style="background:#f8fafc;">
+            <span class="text-muted small" id="paginationInfo"></span>
+            <nav aria-label="Reviews pagination">
+                <ul class="pagination pagination-sm mb-0" id="reviewsPagination"></ul>
+            </nav>
+        </div>
+        @endif
     </div>
 
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
+    const ROWS_PER_PAGE = 15;
+    let currentPage = 1;
+    let currentFilter = 'all';
+
+    function allRows() {
+        return Array.from(document.querySelectorAll('#reviewsTable tbody tr'));
+    }
+
+    function filteredRows() {
+        return allRows().filter(row =>
+            currentFilter === 'all' || row.dataset.sentiment === currentFilter
+        );
+    }
+
+    function renderTable() {
+        const rows   = filteredRows();
+        const total  = rows.length;
+        const pages  = Math.max(1, Math.ceil(total / ROWS_PER_PAGE));
+
+        if (currentPage > pages) currentPage = pages;
+
+        const start = (currentPage - 1) * ROWS_PER_PAGE;
+        const end   = start + ROWS_PER_PAGE;
+
+        // Hide all, then show current page of filtered rows
+        allRows().forEach(r => r.style.display = 'none');
+        rows.slice(start, end).forEach(r => r.style.display = '');
+
+        // Info text
+        const info = document.getElementById('paginationInfo');
+        if (info) {
+            info.textContent = total === 0
+                ? 'No reviews'
+                : `Showing ${start + 1}–${Math.min(end, total)} of ${total} reviews`;
+        }
+
+        // Build pagination buttons
+        const nav = document.getElementById('reviewsPagination');
+        if (!nav) return;
+        nav.innerHTML = '';
+
+        const mkLi = (label, page, disabled, active) => {
+            const li = document.createElement('li');
+            li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
+            const a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            a.innerHTML = label;
+            if (!disabled && !active) {
+                a.addEventListener('click', e => { e.preventDefault(); currentPage = page; renderTable(); });
+            }
+            li.appendChild(a);
+            return li;
+        };
+
+        nav.appendChild(mkLi('&laquo;', currentPage - 1, currentPage === 1, false));
+
+        // Show at most 5 page buttons centred around current page
+        let from = Math.max(1, currentPage - 2);
+        let to   = Math.min(pages, from + 4);
+        from     = Math.max(1, to - 4);
+
+        for (let p = from; p <= to; p++) {
+            nav.appendChild(mkLi(p, p, false, p === currentPage));
+        }
+
+        nav.appendChild(mkLi('&raquo;', currentPage + 1, currentPage === pages, false));
+    }
+
+    // Filter tabs
     document.querySelectorAll('#reviewFilter .nav-link').forEach(tab => {
         tab.addEventListener('click', function (e) {
             e.preventDefault();
             document.querySelectorAll('#reviewFilter .nav-link').forEach(t => t.classList.remove('active'));
             this.classList.add('active');
-
-            const filter = this.dataset.filter;
-            document.querySelectorAll('#reviewsTable tbody tr').forEach(row => {
-                row.style.display = (filter === 'all' || row.dataset.sentiment === filter) ? '' : 'none';
-            });
+            currentFilter = this.dataset.filter;
+            currentPage   = 1;
+            renderTable();
         });
     });
+
+    // PDF export — summary as image, reviews as real text
+    async function exportPDF() {
+        const btn = document.getElementById('exportBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generating…';
+
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc     = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+            const margin  = 10;
+            const pageW   = doc.internal.pageSize.getWidth();
+            const pageH   = doc.internal.pageSize.getHeight();
+            const usableW = pageW - margin * 2;
+
+            // ── 1. Capture summary section as high-quality image ──
+            const summaryEl = document.getElementById('pdf-summary');
+            const canvas    = await html2canvas(summaryEl, {
+                scale: 2, useCORS: true, logging: false, backgroundColor: '#f1f5f9'
+            });
+            const imgData = canvas.toDataURL('image/jpeg', 0.92);
+            const imgH    = (canvas.height / canvas.width) * usableW;
+
+            // If summary fits on one page, add it; otherwise split across pages
+            const availH = pageH - margin * 2;
+            if (imgH <= availH) {
+                doc.addImage(imgData, 'JPEG', margin, margin, usableW, imgH);
+            } else {
+                // Slice image across pages using a temporary canvas
+                const sliceCanvas  = document.createElement('canvas');
+                const pxPerMm      = canvas.width / usableW;
+                const slicePxH     = Math.floor(availH * pxPerMm);
+                sliceCanvas.width  = canvas.width;
+                const ctx          = sliceCanvas.getContext('2d');
+                let srcY = 0;
+                let first = true;
+                while (srcY < canvas.height) {
+                    const thisPxH = Math.min(slicePxH, canvas.height - srcY);
+                    sliceCanvas.height = thisPxH;
+                    ctx.clearRect(0, 0, sliceCanvas.width, thisPxH);
+                    ctx.drawImage(canvas, 0, srcY, canvas.width, thisPxH, 0, 0, canvas.width, thisPxH);
+                    const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+                    const sliceMmH  = thisPxH / pxPerMm;
+                    if (!first) doc.addPage();
+                    doc.addImage(sliceData, 'JPEG', margin, margin, usableW, sliceMmH);
+                    srcY += thisPxH;
+                    first = false;
+                }
+            }
+
+            // ── 2. Add reviews table as real text on a new page ──
+            doc.addPage();
+
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(30, 41, 59);
+            doc.text('ALL REVIEWS', margin, margin + 4);
+
+            const rows  = filteredRows();
+            const label = currentFilter === 'all'
+                ? 'All reviews'
+                : currentFilter.charAt(0).toUpperCase() + currentFilter.slice(1) + ' reviews';
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139);
+            doc.text(`${label}: ${rows.length}`, margin, margin + 9);
+
+            const tableData = rows.map(row => [
+                row.cells[0].textContent.trim(),
+                row.cells[1].textContent.trim(),
+                row.dataset.sentiment === 'positive' ? 'Positive' : 'Negative',
+            ]);
+
+            doc.autoTable({
+                startY: margin + 13,
+                head:   [['#', 'Review', 'Sentiment']],
+                body:   tableData,
+                margin: { left: margin, right: margin },
+                styles:      { fontSize: 8, cellPadding: 2.5, overflow: 'linebreak' },
+                headStyles:  { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
+                columnStyles: {
+                    0: { cellWidth: 10, halign: 'center' },
+                    1: { cellWidth: 'auto' },
+                    2: { cellWidth: 24, halign: 'center' },
+                },
+                didParseCell(data) {
+                    if (data.section === 'body' && data.column.index === 2) {
+                        data.cell.styles.textColor = data.cell.raw === 'Positive'
+                            ? [21, 128, 61]
+                            : [185, 28, 28];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                },
+            });
+
+            doc.save('{{ Str::slug($analysis->product_name) }}_analysis.pdf');
+        } finally {
+            renderTable();
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Export PDF';
+        }
+    }
+
+    // Init
+    renderTable();
 </script>
 </body>
 </html>
