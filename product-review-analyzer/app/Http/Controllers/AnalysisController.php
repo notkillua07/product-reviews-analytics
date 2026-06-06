@@ -8,6 +8,7 @@ use App\Models\ProductCategory;
 use App\Services\AnalysisApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class AnalysisController extends Controller
@@ -73,8 +74,16 @@ class AnalysisController extends Controller
         $product = Product::find($request->product_id);
         abort_if($product->user_id !== Auth::id(), 403);
 
+        $product->load('category');
+
+        set_time_limit(300);
+
         try {
-            $result = $this->apiService->analyze($product->name, $request->file('csv_file'));
+            $result = $this->apiService->analyze(
+                $product->name,
+                $request->file('csv_file'),
+                $product->category?->name,
+            );
         } catch (Throwable $e) {
             if ($isAjax) {
                 return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
@@ -82,17 +91,50 @@ class AnalysisController extends Controller
             return back()->withInput()->withErrors(['api' => $e->getMessage()]);
         }
 
-        Analysis::create([
-            'user_id'          => Auth::id(),
-            'product_id'       => $product->id,
-            'product_name'     => $product->name,
-            'total_reviews'    => $result['total_reviews'],
-            'positive_count'   => $result['positive_count'],
-            'negative_count'   => $result['negative_count'],
-            'product_reasons'  => $result['product_reasons'],
-            'shipping_reasons' => $result['shipping_reasons'],
-            'reviews_data'     => $result['reviews_data'],
-        ]);
+        DB::transaction(function () use ($result, $product) {
+            $analysis = Analysis::create([
+                'user_id'       => Auth::id(),
+                'product_id'    => $product->id,
+                'product_name'  => $product->name,
+                'total_reviews' => $result['total_reviews'],
+                'positive_count'=> $result['positive_count'],
+                'negative_count'=> $result['negative_count'],
+            ]);
+
+            foreach ($result['reviews_data'] as $r) {
+                $analysis->reviews()->create([
+                    'review_order_id'  => $r['id'],
+                    'text'             => $r['text'],
+                    'label'            => $r['label'],
+                    'confidence'       => $r['confidence'] ?? null,
+                    'confidence_level' => $r['confidence_level'] ?? null,
+                ]);
+            }
+
+            foreach ($result['product_reasons'] as $r) {
+                $analysis->reasons()->create([
+                    'type'                 => 'product',
+                    'reason'               => $r['reason'],
+                    'count'                => $r['count'] ?? 0,
+                    'severity'             => $r['severity'] ?? null,
+                    'severity_score'       => $r['severity_score'] ?? null,
+                    'severity_explanation' => $r['severity_explanation'] ?? null,
+                    'review_ids'           => $r['review_ids'] ?? null,
+                ]);
+            }
+
+            foreach ($result['shipping_reasons'] as $r) {
+                $analysis->reasons()->create([
+                    'type'                 => 'shipping',
+                    'reason'               => $r['reason'],
+                    'count'                => $r['count'] ?? 0,
+                    'severity'             => $r['severity'] ?? null,
+                    'severity_score'       => $r['severity_score'] ?? null,
+                    'severity_explanation' => $r['severity_explanation'] ?? null,
+                    'review_ids'           => $r['review_ids'] ?? null,
+                ]);
+            }
+        });
 
         if ($isAjax) {
             return response()->json([
@@ -108,6 +150,8 @@ class AnalysisController extends Controller
     public function show(Analysis $analysis)
     {
         abort_if($analysis->user_id !== Auth::id(), 403);
+
+        $analysis->load(['product.category', 'productReasons', 'shippingReasons', 'reviews']);
 
         return view('analysis.show', compact('analysis'));
     }

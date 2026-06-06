@@ -16,3 +16,6 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+dummy_reviews.json
+Last_response.json
+example_api_request.json

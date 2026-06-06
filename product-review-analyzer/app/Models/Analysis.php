@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Analysis extends Model
 {
@@ -17,15 +18,6 @@ class Analysis extends Model
         'total_reviews',
         'positive_count',
         'negative_count',
-        'product_reasons',
-        'shipping_reasons',
-        'reviews_data',
-    ];
-
-    protected $casts = [
-        'product_reasons'  => 'array',
-        'shipping_reasons' => 'array',
-        'reviews_data'     => 'array',
     ];
 
     public function user(): BelongsTo
@@ -36,6 +28,30 @@ class Analysis extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(AnalysisReview::class)->orderBy('review_order_id');
+    }
+
+    public function reasons(): HasMany
+    {
+        return $this->hasMany(AnalysisReason::class)->orderByDesc('severity_score');
+    }
+
+    public function productReasons(): HasMany
+    {
+        return $this->hasMany(AnalysisReason::class)
+            ->where('type', 'product')
+            ->orderByDesc('severity_score');
+    }
+
+    public function shippingReasons(): HasMany
+    {
+        return $this->hasMany(AnalysisReason::class)
+            ->where('type', 'shipping')
+            ->orderByDesc('severity_score');
     }
 
     public function positivePercent(): float

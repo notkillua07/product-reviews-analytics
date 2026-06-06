@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Product Review Analyzer — Turn Reviews into Insights</title>
+    <title>RenalSight — Turn Reviews into Insights</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    @include('partials.favicon')
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         :root {
@@ -349,13 +350,8 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top" id="mainNav">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2" href="#">
-                <div class="navbar-brand-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
-                    </svg>
-                </div>
-                <span class="fw-bold text-dark">ReviewAnalyzer</span>
+                <img src="{{ asset('renalsight-favicons/favicon-48x48.png') }}" alt="RenalSight" width="36" height="36" style="border-radius:.6rem;">
+                <span class="fw-bold text-dark">RenalSight</span>
             </a>
 
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
@@ -650,7 +646,7 @@
                     <div class="testimonial-card">
                         <div class="mb-3" style="color:#fbbf24;font-size:.9rem;">★★★★★</div>
                         <p class="text-muted small mb-4">
-                            "We used to spend hours manually reading through hundreds of reviews. ReviewAnalyzer cut that down to minutes and actually found issues we completely missed."
+                            "We used to spend hours manually reading through hundreds of reviews. RenalSight cut that down to minutes and actually found issues we completely missed."
                         </p>
                         <div class="d-flex align-items-center gap-2">
                             <div class="avatar" style="background:#4f46e5;">S</div>
@@ -725,15 +721,10 @@
     <footer class="footer">
         <div class="container d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
             <div class="d-flex align-items-center gap-2">
-                <div class="navbar-brand-icon" style="width:26px;height:26px;border-radius:.4rem;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
-                    </svg>
-                </div>
-                <span style="color:#475569;font-size:.8rem;">ReviewAnalyzer</span>
+                <img src="{{ asset('renalsight-favicons/favicon-32x32.png') }}" alt="RenalSight" width="26" height="26" style="border-radius:.4rem;">
+                <span style="color:#475569;font-size:.8rem;">RenalSight</span>
             </div>
-            <p class="mb-0" style="font-size:.8rem;">&copy; {{ date('Y') }} Product Review Analyzer. All rights reserved.</p>
+            <p class="mb-0" style="font-size:.8rem;">&copy; {{ date('Y') }} RenalSight. All rights reserved.</p>
         </div>
     </footer>
 

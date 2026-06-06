@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $analysis->product_name }} — Product Review Analyzer</title>
+    <title>{{ $analysis->product_name }} — RenalSight</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    @include('partials.favicon')
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         body { background: #f1f5f9; }
@@ -39,18 +40,20 @@
         }
         .reason-card:last-child { margin-bottom: 0; }
 
-        /* Product reasons — red theme */
+        /* Product reasons — red → orange → yellow gradation */
         .reason-card.product-reason { border: 1px solid #fee2e2; background: #fff5f5; }
-        .product-reason .reason-rank { background: #ef4444; }
-        .product-reason .reason-rank.r2 { background: #f97316; }
-        .product-reason .reason-rank.r3 { background: #f59e0b; }
+        .product-reason .reason-rank      { background: #dc2626; }          /* rank 1 — deep red     */
+        .product-reason .reason-rank.r2   { background: #f97316; }          /* rank 2 — orange       */
+        .product-reason .reason-rank.r3   { background: #eab308; }          /* rank 3 — yellow       */
+        .product-reason .reason-rank.rest { background: #94a3b8; }          /* rank 4+ — slate grey  */
         .product-reason .reason-count { color: #ef4444; }
 
-        /* Shipping reasons — amber theme */
+        /* Shipping reasons — dark amber → mid amber → light amber gradation */
         .reason-card.shipping-reason { border: 1px solid #fde68a; background: #fffbeb; }
-        .shipping-reason .reason-rank { background: #f59e0b; }
-        .shipping-reason .reason-rank.r2 { background: #fbbf24; }
-        .shipping-reason .reason-rank.r3 { background: #fcd34d; color: #78350f; }
+        .shipping-reason .reason-rank      { background: #b45309; }          /* rank 1 — dark amber   */
+        .shipping-reason .reason-rank.r2   { background: #d97706; }          /* rank 2 — mid amber    */
+        .shipping-reason .reason-rank.r3   { background: #fbbf24; color: #78350f; } /* rank 3 — light amber */
+        .shipping-reason .reason-rank.rest { background: #94a3b8; color: #fff; }    /* rank 4+ — slate grey */
         .shipping-reason .reason-count { color: #d97706; }
 
         .reason-rank {
@@ -84,6 +87,60 @@
         /* Empty reason state */
         .reason-empty { color: #94a3b8; font-size: .82rem; }
 
+        /* Severity badges */
+        .sev-badge {
+            display: inline-flex; align-items: center; gap: .25rem;
+            font-size: .65rem; font-weight: 700; letter-spacing: .05em;
+            text-transform: uppercase; padding: .18rem .55rem; border-radius: 999px;
+            cursor: pointer; user-select: none;
+        }
+        .sev-badge .sev-chevron { transition: transform .2s; font-style: normal; font-size: .6rem; margin-left: .1rem; }
+        .sev-badge.open .sev-chevron { transform: rotate(180deg); }
+        .sev-critical { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .sev-moderate { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+        .sev-minor    { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        /* Severity explanation accordion panel */
+        .sev-explanation {
+            display: none; margin-top: .45rem;
+            font-size: .75rem; line-height: 1.5; color: #475569;
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: .45rem; padding: .45rem .65rem;
+        }
+        .sev-explanation.open { display: block; }
+
+        /* Scrollable reasons list */
+        .reasons-scroll { max-height: 420px; overflow-y: auto; padding-right: 2px; }
+        .reasons-scroll::-webkit-scrollbar { width: 4px; }
+        .reasons-scroll::-webkit-scrollbar-track { background: transparent; }
+        .reasons-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+        .reasons-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Review IDs filter button */
+        .review-ids-label {
+            font-size: .66rem; color: #94a3b8; font-weight: 700;
+            letter-spacing: .05em; text-transform: uppercase;
+            display: block; margin-top: .55rem; margin-bottom: .3rem;
+        }
+        .review-ids-btn {
+            display: inline-flex; align-items: center; gap: .3rem;
+            font-size: .71rem; font-weight: 600;
+            padding: .22rem .7rem; border-radius: 999px;
+            border: 1.5px dashed #a5b4fc; background: #f5f3ff;
+            color: #4f46e5; cursor: pointer; transition: all .15s ease;
+        }
+        .review-ids-btn:hover { background: #e0e7ff; border-color: #4f46e5; border-style: solid; }
+        .review-ids-btn.active-id-filter { background: #4f46e5; color: #fff; border-color: #4f46e5; border-style: solid; }
+
+        /* Active filter banner */
+        #activeIdFilterBanner { background: #eef2ff; }
+
+
+        /* Confidence */
+        .conf-high   { color: #15803d; font-weight: 600; }
+        .conf-medium { color: #d97706; font-weight: 600; }
+        .conf-low    { color: #dc2626; font-weight: 600; }
+        .conf-label  { font-size: .68rem; color: #94a3b8; display: block; }
+
         /* Pagination */
         .pagination .page-link { font-size: .8rem; padding: .3rem .6rem; color: #4f46e5; }
         .pagination .page-item.active .page-link { background: #4f46e5; border-color: #4f46e5; color: #fff; }
@@ -101,13 +158,8 @@
 <nav class="navbar navbar-light bg-white border-bottom shadow-sm">
     <div class="container-lg">
         <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('home') }}">
-            <div class="navbar-brand-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z"/>
-                </svg>
-            </div>
-            <span class="fw-bold text-dark small">ReviewAnalyzer</span>
+            <img src="{{ asset('renalsight-favicons/favicon-48x48.png') }}" alt="RenalSight" width="34" height="34" style="border-radius:.55rem;">
+            <span class="fw-bold text-dark small">RenalSight</span>
         </a>
         <div class="d-flex gap-2">
             <button onclick="exportPDF()" id="exportBtn" class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex align-items-center gap-1">
@@ -188,73 +240,6 @@
         </div>
     </div>
 
-    {{-- ── Negative Reason Categories ── --}}
-    <div class="row g-3 mb-4">
-
-        {{-- Product Issues --}}
-        <div class="col-lg-6">
-            <div class="section-card h-100">
-                <p class="section-title">
-                    <i class="bi bi-box-seam-fill" style="color:#ef4444;"></i>
-                    Product Issues
-                </p>
-
-                @if (!empty($analysis->product_reasons))
-                    @foreach ($analysis->product_reasons as $i => $reason)
-                        <div class="reason-card product-reason">
-                            <div class="reason-rank {{ $i === 1 ? 'r2' : ($i === 2 ? 'r3' : '') }}">
-                                {{ $i + 1 }}
-                            </div>
-                            <div>
-                                <div class="reason-text">{{ $reason['reason'] }}</div>
-                                @if (!empty($reason['count']))
-                                    <div class="reason-count">
-                                        <i class="bi bi-chat-left-text-fill me-1"></i>
-                                        {{ $reason['count'] }} {{ Str::plural('mention', $reason['count']) }}
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
-                @else
-                    <p class="reason-empty mb-0">No product-related issues found.</p>
-                @endif
-            </div>
-        </div>
-
-        {{-- Shipping Issues --}}
-        <div class="col-lg-6">
-            <div class="section-card h-100">
-                <p class="section-title">
-                    <i class="bi bi-truck" style="color:#d97706;"></i>
-                    Shipping Issues
-                </p>
-
-                @if (!empty($analysis->shipping_reasons))
-                    @foreach ($analysis->shipping_reasons as $i => $reason)
-                        <div class="reason-card shipping-reason">
-                            <div class="reason-rank {{ $i === 1 ? 'r2' : ($i === 2 ? 'r3' : '') }}">
-                                {{ $i + 1 }}
-                            </div>
-                            <div>
-                                <div class="reason-text">{{ $reason['reason'] }}</div>
-                                @if (!empty($reason['count']))
-                                    <div class="reason-count">
-                                        <i class="bi bi-chat-left-text-fill me-1"></i>
-                                        {{ $reason['count'] }} {{ Str::plural('mention', $reason['count']) }}
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
-                @else
-                    <p class="reason-empty mb-0">No shipping-related issues found.</p>
-                @endif
-            </div>
-        </div>
-
-    </div>
-
     {{-- ── Sentiment Breakdown ── --}}
     <div class="section-card mb-4">
         <p class="section-title">
@@ -292,10 +277,129 @@
         </div>
     </div>
 
+    {{-- ── Negative Reason Categories ── --}}
+    <div class="row g-3 mb-4">
+
+        {{-- Product Issues --}}
+        <div class="col-lg-6">
+            <div class="section-card h-100">
+                <p class="section-title">
+                    <i class="bi bi-box-seam-fill" style="color:#ef4444;"></i>
+                    Product Issues
+                </p>
+
+                <div class="reasons-scroll">
+                @forelse ($analysis->productReasons as $i => $reason)
+                    @php $rankClass = match(true) { $i === 1 => 'r2', $i === 2 => 'r3', $i > 2 => 'rest', default => '' }; @endphp
+                    <div class="reason-card product-reason">
+                        <div class="reason-rank {{ $rankClass }}">
+                            {{ $i + 1 }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <div class="reason-text">{{ $reason->reason }}</div>
+                                @if ($reason->severity)
+                                    @php $sevId = 'sev-p-' . $loop->index; @endphp
+                                    <span class="sev-badge sev-{{ $reason->severity }}"
+                                          @if($reason->severity_explanation) onclick="toggleSev('{{ $sevId }}')" @endif>
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                        {{ $reason->severity }}
+                                        @if ($reason->severity_score) · {{ $reason->severity_score }}/5 @endif
+                                        @if($reason->severity_explanation)<i class="sev-chevron">▾</i>@endif
+                                    </span>
+                                @endif
+                            </div>
+                            @if ($reason->severity_explanation)
+                                <div class="sev-explanation" id="sev-p-{{ $loop->index }}">{{ $reason->severity_explanation }}</div>
+                            @endif
+                            @if ($reason->count)
+                                <div class="reason-count mt-1">
+                                    <i class="bi bi-chat-left-text-fill me-1"></i>
+                                    {{ $reason->count }} {{ Str::plural('mention', $reason->count) }}
+                                </div>
+                            @endif
+                            @if (!empty($reason->review_ids))
+                                <span class="review-ids-label">
+                                    <i class="bi bi-funnel-fill me-1"></i>Filter affected reviews
+                                </span>
+                                <button class="review-ids-btn"
+                                    onclick="filterByReviewIds({{ json_encode($reason->review_ids) }}, this)">
+                                    <i class="bi bi-funnel me-1"></i>
+                                    {{ count($reason->review_ids) }} {{ Str::plural('review', count($reason->review_ids)) }}
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <p class="reason-empty mb-0">No product-related issues found.</p>
+                @endforelse
+                </div>
+            </div>
+        </div>
+
+        {{-- Shipping Issues --}}
+        <div class="col-lg-6">
+            <div class="section-card h-100">
+                <p class="section-title">
+                    <i class="bi bi-truck" style="color:#d97706;"></i>
+                    Shipping Issues
+                </p>
+
+                <div class="reasons-scroll">
+                @forelse ($analysis->shippingReasons as $i => $reason)
+                    @php $rankClass = match(true) { $i === 1 => 'r2', $i === 2 => 'r3', $i > 2 => 'rest', default => '' }; @endphp
+                    <div class="reason-card shipping-reason">
+                        <div class="reason-rank {{ $rankClass }}">
+                            {{ $i + 1 }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <div class="reason-text">{{ $reason->reason }}</div>
+                                @if ($reason->severity)
+                                    @php $sevId = 'sev-s-' . $loop->index; @endphp
+                                    <span class="sev-badge sev-{{ $reason->severity }}"
+                                          @if($reason->severity_explanation) onclick="toggleSev('{{ $sevId }}')" @endif>
+                                        <i class="bi bi-exclamation-triangle-fill"></i>
+                                        {{ $reason->severity }}
+                                        @if ($reason->severity_score) · {{ $reason->severity_score }}/5 @endif
+                                        @if($reason->severity_explanation)<i class="sev-chevron">▾</i>@endif
+                                    </span>
+                                @endif
+                            </div>
+                            @if ($reason->severity_explanation)
+                                <div class="sev-explanation" id="sev-s-{{ $loop->index }}">{{ $reason->severity_explanation }}</div>
+                            @endif
+                            @if ($reason->count)
+                                <div class="reason-count mt-1">
+                                    <i class="bi bi-chat-left-text-fill me-1"></i>
+                                    {{ $reason->count }} {{ Str::plural('mention', $reason->count) }}
+                                </div>
+                            @endif
+                            @if (!empty($reason->review_ids))
+                                <span class="review-ids-label">
+                                    <i class="bi bi-funnel-fill me-1"></i>Filter affected reviews
+                                </span>
+                                <button class="review-ids-btn"
+                                    onclick="filterByReviewIds({{ json_encode($reason->review_ids) }}, this)">
+                                    <i class="bi bi-funnel me-1"></i>
+                                    {{ count($reason->review_ids) }} {{ Str::plural('review', count($reason->review_ids)) }}
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <p class="reason-empty mb-0">No shipping-related issues found.</p>
+                @endforelse
+                </div>
+            </div>
+        </div>
+
+    </div>
+
     </div>{{-- /pdf-summary --}}
 
     {{-- ── Reviews list ── --}}
-    <div class="section-card shadow-sm" style="padding: 0; overflow: hidden;">
+    <div id="reviewsSection" class="section-card shadow-sm" style="padding: 0; overflow: hidden;">
         <div class="px-4 py-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2"
              style="background:#f8fafc;">
             <h6 class="fw-bold mb-0">
@@ -323,7 +427,19 @@
             </div>
         </div>
 
-        @if (!empty($analysis->reviews_data))
+        {{-- Active review-ID filter banner --}}
+        <div id="activeIdFilterBanner" class="px-4 py-2 border-bottom d-none d-flex align-items-center gap-3">
+            <span class="small fw-semibold" style="color:#4338ca;">
+                <i class="bi bi-funnel-fill me-1"></i>
+                Showing <span id="activeIdCount"></span> reviews linked to this reason
+            </span>
+            <button onclick="clearIdFilter()"
+                    class="btn btn-link btn-sm text-danger p-0 text-decoration-none small">
+                <i class="bi bi-x-circle me-1"></i>Clear filter
+            </button>
+        </div>
+
+        @if ($analysis->reviews->isNotEmpty())
             <div class="table-responsive">
                 <table class="table table-hover mb-0" id="reviewsTable">
                     <thead>
@@ -331,15 +447,16 @@
                             <th style="width:50px;">#</th>
                             <th>Review</th>
                             <th style="width:120px;" class="text-center">Sentiment</th>
+                            <th style="width:110px;" class="text-center">Confidence</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($analysis->reviews_data as $review)
-                        <tr data-sentiment="{{ $review['label'] ?? 'unknown' }}">
-                            <td class="text-muted small">{{ $review['id'] ?? ($loop->index) }}</td>
-                            <td class="small">{{ $review['text'] }}</td>
+                        @foreach ($analysis->reviews as $review)
+                        <tr data-sentiment="{{ $review->label }}">
+                            <td class="text-muted small">{{ $review->review_order_id }}</td>
+                            <td class="small">{{ $review->text }}</td>
                             <td class="text-center">
-                                @if (($review['label'] ?? '') === 'positive')
+                                @if ($review->label === 'positive')
                                     <span class="badge rounded-pill badge-pos px-3">
                                         <i class="bi bi-emoji-smile-fill me-1"></i>Positive
                                     </span>
@@ -347,6 +464,16 @@
                                     <span class="badge rounded-pill badge-neg px-3">
                                         <i class="bi bi-emoji-frown-fill me-1"></i>Negative
                                     </span>
+                                @endif
+                            </td>
+                            <td class="text-center small">
+                                @if ($review->confidence !== null)
+                                    <span class="conf-{{ $review->confidence_level ?? 'high' }}">
+                                        {{ $review->confidencePercent() }}
+                                    </span>
+                                    <span class="conf-label">{{ ucfirst($review->confidence_level ?? '') }}</span>
+                                @else
+                                    <span class="text-muted">—</span>
                                 @endif
                             </td>
                         </tr>
@@ -359,7 +486,7 @@
         @endif
 
         {{-- Pagination bar --}}
-        @if (!empty($analysis->reviews_data))
+        @if ($analysis->reviews->isNotEmpty())
         <div class="px-4 py-3 border-top d-flex align-items-center justify-content-between flex-wrap gap-2"
              id="paginationContainer" style="background:#f8fafc;">
             <span class="text-muted small" id="paginationInfo"></span>
@@ -372,23 +499,77 @@
 
 </main>
 
+@php
+    $pdfProductReasons  = $analysis->productReasons->values()->map(fn($r) => [
+        'reason'              => $r->reason,
+        'severity'            => $r->severity,
+        'severityScore'       => $r->severity_score,
+        'severityExplanation' => $r->severity_explanation,
+        'count'               => $r->count,
+    ]);
+    $pdfShippingReasons = $analysis->shippingReasons->values()->map(fn($r) => [
+        'reason'              => $r->reason,
+        'severity'            => $r->severity,
+        'severityScore'       => $r->severity_score,
+        'severityExplanation' => $r->severity_explanation,
+        'count'               => $r->count,
+    ]);
+@endphp
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
+    const AD = {
+        productName:     @json($analysis->product_name),
+        category:        @json($analysis->product->category?->name ?? null),
+        date:            @json($analysis->created_at->format('d M Y, H:i')),
+        positiveCount:   {{ $analysis->positive_count }},
+        negativeCount:   {{ $analysis->negative_count }},
+        positivePercent: {{ $analysis->positivePercent() }},
+        negativePercent: {{ $analysis->negativePercent() }},
+        productReasons:  @json($pdfProductReasons),
+        shippingReasons: @json($pdfShippingReasons),
+    };
+
     const ROWS_PER_PAGE = 15;
-    let currentPage = 1;
+    let currentPage   = 1;
     let currentFilter = 'all';
+    let reviewIdFilter = null; // null = no ID filter, or array of review_order_ids
 
     function allRows() {
         return Array.from(document.querySelectorAll('#reviewsTable tbody tr'));
     }
 
     function filteredRows() {
-        return allRows().filter(row =>
-            currentFilter === 'all' || row.dataset.sentiment === currentFilter
-        );
+        return allRows().filter(row => {
+            const sentimentOk = currentFilter === 'all' || row.dataset.sentiment === currentFilter;
+            const idOk = reviewIdFilter === null ||
+                reviewIdFilter.includes(parseInt(row.cells[0].textContent.trim()));
+            return sentimentOk && idOk;
+        });
+    }
+
+    function filterByReviewIds(ids, btn) {
+        const alreadyActive = btn.classList.contains('active-id-filter');
+        document.querySelectorAll('.review-ids-btn').forEach(b => b.classList.remove('active-id-filter'));
+
+        if (alreadyActive) {
+            reviewIdFilter = null;
+        } else {
+            reviewIdFilter = ids;
+            btn.classList.add('active-id-filter');
+            document.getElementById('reviewsSection')
+                .scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        currentPage = 1;
+        renderTable();
+    }
+
+    function clearIdFilter() {
+        reviewIdFilter = null;
+        document.querySelectorAll('.review-ids-btn').forEach(b => b.classList.remove('active-id-filter'));
+        currentPage = 1;
+        renderTable();
     }
 
     function renderTable() {
@@ -404,6 +585,17 @@
         // Hide all, then show current page of filtered rows
         allRows().forEach(r => r.style.display = 'none');
         rows.slice(start, end).forEach(r => r.style.display = '');
+
+        // Active ID filter banner
+        const banner = document.getElementById('activeIdFilterBanner');
+        if (banner) {
+            if (reviewIdFilter !== null) {
+                banner.classList.remove('d-none');
+                document.getElementById('activeIdCount').textContent = reviewIdFilter.length;
+            } else {
+                banner.classList.add('d-none');
+            }
+        }
 
         // Info text
         const info = document.getElementById('paginationInfo');
@@ -458,7 +650,7 @@
         });
     });
 
-    // PDF export — summary as image, reviews as real text
+    // PDF export — fully text-based, no screenshots
     async function exportPDF() {
         const btn = document.getElementById('exportBtn');
         btn.disabled = true;
@@ -466,98 +658,247 @@
 
         try {
             const { jsPDF } = window.jspdf;
-            const doc     = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-            const margin  = 10;
-            const pageW   = doc.internal.pageSize.getWidth();
-            const pageH   = doc.internal.pageSize.getHeight();
-            const usableW = pageW - margin * 2;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            const M   = 14;         // margin
+            const PW  = 210;        // page width
+            const PH  = 297;        // page height
+            const UW  = PW - M * 2; // usable width
+            let y = M;
 
-            // ── 1. Capture summary section as high-quality image ──
-            const summaryEl = document.getElementById('pdf-summary');
-            const canvas    = await html2canvas(summaryEl, {
-                scale: 2, useCORS: true, logging: false, backgroundColor: '#f1f5f9'
-            });
-            const imgData = canvas.toDataURL('image/jpeg', 0.92);
-            const imgH    = (canvas.height / canvas.width) * usableW;
+            const C = {
+                brand:    [79,  70,  229],
+                dark:     [30,  41,  59],
+                mid:      [71,  85,  105],
+                muted:    [100, 116, 139],
+                light:    [148, 163, 184],
+                pos:      [21,  128, 61],
+                neg:      [185, 28,  28],
+                critical: [153, 27,  27],
+                moderate: [146, 64,  14],
+                minor:    [22,  101, 52],
+                bg:       [248, 250, 252],
+                border:   [226, 232, 240],
+            };
 
-            // If summary fits on one page, add it; otherwise split across pages
-            const availH = pageH - margin * 2;
-            if (imgH <= availH) {
-                doc.addImage(imgData, 'JPEG', margin, margin, usableW, imgH);
-            } else {
-                // Slice image across pages using a temporary canvas
-                const sliceCanvas  = document.createElement('canvas');
-                const pxPerMm      = canvas.width / usableW;
-                const slicePxH     = Math.floor(availH * pxPerMm);
-                sliceCanvas.width  = canvas.width;
-                const ctx          = sliceCanvas.getContext('2d');
-                let srcY = 0;
-                let first = true;
-                while (srcY < canvas.height) {
-                    const thisPxH = Math.min(slicePxH, canvas.height - srcY);
-                    sliceCanvas.height = thisPxH;
-                    ctx.clearRect(0, 0, sliceCanvas.width, thisPxH);
-                    ctx.drawImage(canvas, 0, srcY, canvas.width, thisPxH, 0, 0, canvas.width, thisPxH);
-                    const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
-                    const sliceMmH  = thisPxH / pxPerMm;
-                    if (!first) doc.addPage();
-                    doc.addImage(sliceData, 'JPEG', margin, margin, usableW, sliceMmH);
-                    srcY += thisPxH;
-                    first = false;
-                }
+            function sf(size, weight = 'normal', color = C.dark) {
+                doc.setFontSize(size);
+                doc.setFont('helvetica', weight);
+                doc.setTextColor(...color);
             }
 
-            // ── 2. Add reviews table as real text on a new page ──
+            function hRule(yPos) {
+                doc.setDrawColor(...C.border);
+                doc.setLineWidth(0.2);
+                doc.line(M, yPos, M + UW, yPos);
+            }
+
+            function checkPage(needed = 10) {
+                if (y + needed > PH - M - 10) { doc.addPage(); y = M; }
+            }
+
+            // ── BRAND HEADER BAR ──
+            doc.setFillColor(...C.brand);
+            doc.rect(0, 0, PW, 14, 'F');
+            sf(11, 'bold', [255, 255, 255]);
+            doc.text('RenalSight', M, 9.5);
+            sf(8, 'normal', [200, 210, 255]);
+            doc.text('Product Analysis Report', M + 32, 9.5);
+            y = 22;
+
+            // ── PRODUCT META ──
+            sf(15, 'bold');
+            doc.text(AD.productName, M, y);
+            y += 6;
+            if (AD.category) {
+                sf(9, 'normal', C.muted);
+                doc.text(AD.category, M, y);
+                y += 5;
+            }
+            sf(8, 'normal', C.muted);
+            doc.text(`Generated: ${AD.date}  ·  Total Reviews: ${AD.positiveCount + AD.negativeCount}`, M, y);
+            y += 8;
+            hRule(y); y += 6;
+
+            // ── SENTIMENT OVERVIEW ──
+            sf(8, 'bold', C.muted);
+            doc.text('SENTIMENT OVERVIEW', M, y);
+            y += 5;
+
+            const barW = UW * 0.50;
+            const barH = 4.5;
+            const stX  = M + barW + 5;
+
+            // Positive bar
+            const posBarW = barW * (AD.positivePercent / 100);
+            doc.setFillColor(...C.border);
+            doc.roundedRect(M, y, barW, barH, 1, 1, 'F');
+            if (posBarW > 1) { doc.setFillColor(...C.pos); doc.roundedRect(M, y, posBarW, barH, 1, 1, 'F'); }
+            sf(9, 'bold', C.pos);
+            const posLabel = `${AD.positivePercent}%`;
+            doc.text(posLabel, stX, y + 3.3);
+            sf(8, 'normal', C.mid);
+            doc.text(`  Positive  (${AD.positiveCount})`, stX + doc.getTextWidth(posLabel), y + 3.3);
+            y += barH + 2.5;
+
+            // Negative bar
+            const negBarW = barW * (AD.negativePercent / 100);
+            doc.setFillColor(...C.border);
+            doc.roundedRect(M, y, barW, barH, 1, 1, 'F');
+            if (negBarW > 1) { doc.setFillColor(...C.neg); doc.roundedRect(M, y, negBarW, barH, 1, 1, 'F'); }
+            sf(9, 'bold', C.neg);
+            const negLabel = `${AD.negativePercent}%`;
+            doc.text(negLabel, stX, y + 3.3);
+            sf(8, 'normal', C.mid);
+            doc.text(`  Negative  (${AD.negativeCount})`, stX + doc.getTextWidth(negLabel), y + 3.3);
+            y += barH + 8;
+            hRule(y); y += 6;
+
+            // ── REASONS RENDERER ──
+            function drawReasons(title, reasons, rankColors) {
+                checkPage(20);
+                sf(8, 'bold', C.muted);
+                doc.text(title.toUpperCase(), M, y);
+                y += 5;
+
+                if (!reasons || !reasons.length) {
+                    sf(8, 'normal', C.light);
+                    doc.text('No issues found.', M + 4, y);
+                    y += 7;
+                    return;
+                }
+
+                reasons.forEach((r, idx) => {
+                    const rankColor = rankColors[idx] || C.light;
+                    const textX = M + 9;
+                    const textW = UW - 9;
+
+                    const reasonLines = doc.splitTextToSize(r.reason, textW);
+                    const expLines    = r.severityExplanation
+                        ? doc.splitTextToSize(r.severityExplanation, textW - 5)
+                        : [];
+                    const blockH = reasonLines.length * 4.5
+                                 + (r.severity ? 4.5 : 0)
+                                 + (expLines.length ? expLines.length * 3.8 + 5 : 0)
+                                 + 5;
+                    checkPage(blockH);
+
+                    // Rank circle
+                    doc.setFillColor(...rankColor);
+                    doc.circle(M + 3, y + 2, 2.8, 'F');
+                    doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+                    doc.text(String(idx + 1), M + 3, y + 3, { align: 'center' });
+
+                    // Reason text
+                    sf(9, 'normal', C.dark);
+                    doc.text(reasonLines, textX, y + 1.5);
+                    y += reasonLines.length * 4.5;
+
+                    // Severity + count
+                    if (r.severity) {
+                        const sevColor = r.severity === 'critical' ? C.critical
+                                       : r.severity === 'moderate' ? C.moderate : C.minor;
+                        const sevStr   = `${r.severity.toUpperCase()}${r.severityScore ? '  ' + r.severityScore + '/5' : ''}`;
+                        sf(7, 'bold', sevColor);
+                        doc.text(sevStr, textX, y + 1.5);
+                        if (r.count) {
+                            sf(7, 'normal', C.muted);
+                            doc.text(`  ·  ${r.count} mention${r.count !== 1 ? 's' : ''}`, textX + doc.getTextWidth(sevStr), y + 1.5);
+                        }
+                        y += 4.5;
+                    } else if (r.count) {
+                        sf(7, 'normal', C.muted);
+                        doc.text(`${r.count} mention${r.count !== 1 ? 's' : ''}`, textX, y + 1.5);
+                        y += 4.5;
+                    }
+
+                    // Severity explanation box
+                    if (expLines.length) {
+                        const boxH = expLines.length * 3.8 + 3.5;
+                        checkPage(boxH + 4);
+                        doc.setFillColor(...C.bg);
+                        doc.setDrawColor(...C.border);
+                        doc.setLineWidth(0.15);
+                        doc.roundedRect(textX, y, textW - 2, boxH, 1.5, 1.5, 'FD');
+                        sf(7, 'normal', C.mid);
+                        doc.text(expLines, textX + 2.5, y + 3);
+                        y += boxH + 2;
+                    }
+
+                    y += 3;
+                });
+            }
+
+            const prodColors = [[220,38,38],[249,115,22],[234,179,8],...Array(20).fill(C.light)];
+            const shipColors = [[180,83,9],[217,119,6],[251,191,36],...Array(20).fill(C.light)];
+
+            drawReasons('Product Issues', AD.productReasons, prodColors);
+            checkPage(12); hRule(y); y += 6;
+            drawReasons('Shipping Issues', AD.shippingReasons, shipColors);
+
+            // ── FOOTERS on summary pages ──
+            const summaryPages = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= summaryPages; i++) {
+                doc.setPage(i);
+                hRule(PH - 9);
+                sf(7, 'normal', C.light);
+                doc.text('RenalSight', M, PH - 5.5);
+                doc.text(`Page ${i}`, M + UW, PH - 5.5, { align: 'right' });
+            }
+
+            // ── REVIEWS TABLE ──
             doc.addPage();
+            sf(11, 'bold', C.dark);
+            doc.text('ALL REVIEWS', M, M + 5);
 
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(30, 41, 59);
-            doc.text('ALL REVIEWS', margin, margin + 4);
-
-            const rows  = filteredRows();
-            const label = currentFilter === 'all'
-                ? 'All reviews'
-                : currentFilter.charAt(0).toUpperCase() + currentFilter.slice(1) + ' reviews';
-            doc.setFontSize(8);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(100, 116, 139);
-            doc.text(`${label}: ${rows.length}`, margin, margin + 9);
-
-            const tableData = rows.map(row => [
+            const tableRows = allRows().map(row => [
                 row.cells[0].textContent.trim(),
                 row.cells[1].textContent.trim(),
                 row.dataset.sentiment === 'positive' ? 'Positive' : 'Negative',
+                row.cells[3] ? row.cells[3].textContent.replace(/\s+/g, ' ').trim() : '—',
             ]);
 
             doc.autoTable({
-                startY: margin + 13,
-                head:   [['#', 'Review', 'Sentiment']],
-                body:   tableData,
-                margin: { left: margin, right: margin },
+                startY: M + 10,
+                head:   [['#', 'Review', 'Sentiment', 'Confidence']],
+                body:   tableRows,
+                margin: { left: M, right: M },
                 styles:      { fontSize: 8, cellPadding: 2.5, overflow: 'linebreak' },
-                headStyles:  { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
+                headStyles:  { fillColor: C.brand, textColor: 255, fontStyle: 'bold' },
                 columnStyles: {
                     0: { cellWidth: 10, halign: 'center' },
                     1: { cellWidth: 'auto' },
                     2: { cellWidth: 24, halign: 'center' },
+                    3: { cellWidth: 24, halign: 'center' },
                 },
                 didParseCell(data) {
                     if (data.section === 'body' && data.column.index === 2) {
-                        data.cell.styles.textColor = data.cell.raw === 'Positive'
-                            ? [21, 128, 61]
-                            : [185, 28, 28];
+                        data.cell.styles.textColor = data.cell.raw === 'Positive' ? C.pos : C.neg;
                         data.cell.styles.fontStyle = 'bold';
                     }
+                },
+                didDrawPage() {
+                    const pg = doc.internal.getCurrentPageInfo().pageNumber;
+                    doc.setDrawColor(...C.border); doc.setLineWidth(0.2);
+                    doc.line(M, PH - 9, M + UW, PH - 9);
+                    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.light);
+                    doc.text('RenalSight', M, PH - 5.5);
+                    doc.text(`Page ${pg}`, M + UW, PH - 5.5, { align: 'right' });
                 },
             });
 
             doc.save('{{ Str::slug($analysis->product_name) }}_analysis.pdf');
         } finally {
-            renderTable();
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-file-earmark-pdf"></i> Export PDF';
         }
+    }
+
+    // Severity explanation accordion toggle
+    function toggleSev(id) {
+        const panel = document.getElementById(id);
+        const badge = panel.closest('.flex-grow-1').querySelector('.sev-badge');
+        panel.classList.toggle('open');
+        if (badge) badge.classList.toggle('open');
     }
 
     // Init

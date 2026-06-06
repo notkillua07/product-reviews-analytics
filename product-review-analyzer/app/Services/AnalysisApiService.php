@@ -45,9 +45,18 @@ class AnalysisApiService
      *
      * @throws RuntimeException
      */
-    public function analyze(string $productName, UploadedFile $csvFile): array
+    public function analyze(string $productName, UploadedFile $csvFile, ?string $productCategory = null): array
     {
         $reviews = $this->extractReviews($csvFile);
+
+        $payload = [
+            'product_name' => $productName,
+            'reviews'      => $reviews,
+        ];
+
+        if ($productCategory !== null) {
+            $payload['product_category'] = $productCategory;
+        }
 
         try {
             $response = Http::timeout(300)
@@ -57,10 +66,7 @@ class AnalysisApiService
                     'Accept'                     => 'application/json',
                     'ngrok-skip-browser-warning' => '69420',
                 ])
-                ->post($this->url, [
-                    'product_name' => $productName,
-                    'reviews'      => $reviews,
-                ]);
+                ->post($this->url, $payload);
 
             if ($response->failed()) {
                 throw new RuntimeException(

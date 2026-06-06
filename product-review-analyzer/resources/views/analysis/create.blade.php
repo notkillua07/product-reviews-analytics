@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>New Analysis — Product Review Analyzer</title>
+    <title>New Analysis — RenalSight</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    @include('partials.favicon')
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         body { background: #f1f5f9; }
@@ -110,13 +111,8 @@
 <nav class="navbar navbar-light bg-white border-bottom shadow-sm">
     <div class="container-lg">
         <a class="navbar-brand d-flex align-items-center gap-2" href="{{ route('home') }}">
-            <div class="navbar-brand-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z"/>
-                </svg>
-            </div>
-            <span class="fw-bold text-dark small">ReviewAnalyzer</span>
+            <img src="{{ asset('renalsight-favicons/favicon-48x48.png') }}" alt="RenalSight" width="34" height="34" style="border-radius:.55rem;">
+            <span class="fw-bold text-dark small">RenalSight</span>
         </a>
         <span class="small text-muted d-none d-sm-inline">
             <i class="bi bi-person-circle me-1"></i>
